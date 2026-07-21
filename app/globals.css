@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'Inter', sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: #F8F5F0; color: #0F0F0F; font-family: var(--font-body); }
+h1, h2, h3, h4 { font-family: var(--font-display); }
+::selection { background: #D4AF37; color: #0F0F0F; }
+:focus-visible { outline: 2px solid #D4AF37; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; color: #D4AF37; }
+.badge-low-stock { background: #fef3c7; color: #92400e; }
+.badge-out-stock { background: #fee2e2; color: #991b1b; }
