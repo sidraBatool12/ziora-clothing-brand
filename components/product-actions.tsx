@@ -2,11 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Heart, Minus, Plus, Check } from "@phosphor-icons/react";
 import { useCartStore, useWishlistStore } from "@/store";
 import type { ProductLean } from "@/features/products/queries";
 import { formatPrice } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-export function ProductActions({ product }: { product: ProductLean }) {
+export function ProductActions({
+  product,
+  hidePrice = false,
+}: {
+  product: ProductLean;
+  hidePrice?: boolean;
+}) {
   const router = useRouter();
   const [size, setSize] = useState(product.sizes[0] || "");
   const [color, setColor] = useState(product.colors[0] || "");
@@ -18,17 +26,29 @@ export function ProductActions({ product }: { product: ProductLean }) {
   const [stockWarning, setStockWarning] = useState<string | null>(null);
 
   const outOfStock = product.stockQuantity <= 0;
-  const price = product.discountPrice > 0 && product.discountPrice < product.price ? product.discountPrice : product.price;
+  const price =
+    product.discountPrice > 0 && product.discountPrice < product.price
+      ? product.discountPrice
+      : product.price;
 
   function handleAddToCart() {
     if (quantity > product.stockQuantity) {
-      setStockWarning(`Only ${product.stockQuantity} item${product.stockQuantity === 1 ? "" : "s"} available`);
+      setStockWarning(
+        `Only ${product.stockQuantity} item${product.stockQuantity === 1 ? "" : "s"} available`
+      );
       return;
     }
     setStockWarning(null);
     addItem({
-      productId: product._id, name: product.name, slug: product.slug, image: product.thumbnail.url,
-      price, size, color, quantity, maxStock: product.stockQuantity,
+      productId: product._id,
+      name: product.name,
+      slug: product.slug,
+      image: product.thumbnail.url,
+      price,
+      size,
+      color,
+      quantity,
+      maxStock: product.stockQuantity,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -36,7 +56,9 @@ export function ProductActions({ product }: { product: ProductLean }) {
 
   function handleBuyNow() {
     if (quantity > product.stockQuantity) {
-      setStockWarning(`Only ${product.stockQuantity} item${product.stockQuantity === 1 ? "" : "s"} available`);
+      setStockWarning(
+        `Only ${product.stockQuantity} item${product.stockQuantity === 1 ? "" : "s"} available`
+      );
       return;
     }
     handleAddToCart();
@@ -44,53 +66,119 @@ export function ProductActions({ product }: { product: ProductLean }) {
   }
 
   return (
-    <div className="space-y-6">
-      <p className="text-2xl text-onyx">{formatPrice(price)}</p>
+    <div className="space-y-7">
+      {!hidePrice && <p className="text-2xl tracking-tight text-onyx">{formatPrice(price)}</p>}
 
-      {outOfStock && <p className="text-sm font-medium text-red-600">Out of Stock</p>}
-      {!outOfStock && product.stockQuantity <= 5 && <p className="text-sm text-gold">Only {product.stockQuantity} left in stock</p>}
+      {outOfStock && <p className="text-sm font-medium text-rose">Out of Stock</p>}
+      {!outOfStock && product.stockQuantity <= 5 && (
+        <p className="text-sm text-rose">Only {product.stockQuantity} left in stock</p>
+      )}
 
       {product.colors.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-widest text-onyx/60">Color</p>
-          <div className="flex gap-2">
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-onyx/45">Color</p>
+          <div className="flex flex-wrap gap-2">
             {product.colors.map((c) => (
-              <button key={c} onClick={() => setColor(c)} className={`border px-3 py-1.5 text-xs ${color === c ? "border-gold text-gold" : "border-onyx/20"}`}>{c}</button>
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                className={cn(
+                  "border px-3.5 py-2 text-xs transition-all duration-300 active:scale-[0.98]",
+                  color === c
+                    ? "border-onyx bg-onyx text-white"
+                    : "border-onyx/15 hover:border-onyx/40"
+                )}
+              >
+                {c}
+              </button>
             ))}
           </div>
         </div>
       )}
 
       {product.sizes.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-widest text-onyx/60">Size</p>
-          <div className="flex gap-2">
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-onyx/45">Size</p>
+          <div className="flex flex-wrap gap-2">
             {product.sizes.map((s) => (
-              <button key={s} onClick={() => setSize(s)} className={`h-9 w-9 border text-xs ${size === s ? "border-gold text-gold" : "border-onyx/20"}`}>{s}</button>
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSize(s)}
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center border text-xs transition-all duration-300 active:scale-[0.98]",
+                  size === s
+                    ? "border-onyx bg-onyx text-white"
+                    : "border-onyx/15 hover:border-onyx/40"
+                )}
+              >
+                {s}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <p className="text-xs uppercase tracking-widest text-onyx/60">Qty</p>
-        <div className="flex items-center border border-onyx/20">
-          <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="px-3 py-1.5">−</button>
-          <span className="px-4 text-sm">{quantity}</span>
-          <button onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))} className="px-3 py-1.5">+</button>
+      <div className="flex items-center gap-4">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-onyx/45">Qty</p>
+        <div className="flex items-center border border-onyx/15">
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            className="flex h-10 w-10 items-center justify-center transition-colors hover:bg-mist/60"
+            aria-label="Decrease quantity"
+          >
+            <Minus size={14} weight="bold" />
+          </button>
+          <span className="min-w-10 text-center text-sm">{quantity}</span>
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))}
+            className="flex h-10 w-10 items-center justify-center transition-colors hover:bg-mist/60"
+            aria-label="Increase quantity"
+          >
+            <Plus size={14} weight="bold" />
+          </button>
         </div>
       </div>
 
-      {stockWarning && <p className="text-sm text-red-600">{stockWarning}</p>}
+      {stockWarning && <p className="text-sm text-rose">{stockWarning}</p>}
 
-      <div className="flex gap-3">
-        <button onClick={handleAddToCart} disabled={outOfStock} className="flex-1 bg-onyx py-3 text-xs uppercase tracking-widest text-white hover:bg-onyx/90 disabled:opacity-40">
-          {added ? "Added ✓" : "Add to Cart"}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={outOfStock}
+          className="btn-primary flex-1 disabled:opacity-40"
+        >
+          {added ? (
+            <span className="inline-flex items-center gap-2">
+              <Check size={14} weight="bold" /> Added
+            </span>
+          ) : (
+            "Add to Cart"
+          )}
         </button>
-        <button onClick={handleBuyNow} disabled={outOfStock} className="flex-1 border border-onyx py-3 text-xs uppercase tracking-widest hover:border-gold hover:text-gold disabled:opacity-40">
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          disabled={outOfStock}
+          className="btn-secondary flex-1 disabled:opacity-40"
+        >
           Buy Now
         </button>
-        <button onClick={() => toggleWishlist(product._id)} aria-label="Toggle wishlist" className={`border px-4 ${inWishlist ? "border-gold text-gold" : "border-onyx/20"}`}>♥</button>
+        <button
+          type="button"
+          onClick={() => toggleWishlist(product._id)}
+          aria-label="Toggle wishlist"
+          className={cn(
+            "flex h-12 w-12 shrink-0 items-center justify-center border transition-all duration-300 active:scale-[0.98]",
+            inWishlist ? "border-rose bg-rose/5 text-rose" : "border-onyx/15 text-onyx/60 hover:border-onyx"
+          )}
+        >
+          <Heart size={18} weight={inWishlist ? "fill" : "light"} />
+        </button>
       </div>
     </div>
   );

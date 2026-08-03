@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const inputClass = "w-full border border-onyx/15 bg-white px-4 py-3 text-sm outline-none focus-visible:border-gold";
-const labelClass = "mb-1.5 block text-xs uppercase tracking-widest text-onyx/60";
-const btnClass = "w-full bg-onyx py-3 text-sm uppercase tracking-widest text-white transition hover:bg-onyx/90 disabled:opacity-50";
+const btnClass = "w-full rounded-full bg-onyx py-3.5 text-[11px] uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-onyx/90 active:scale-[0.98] disabled:opacity-50";
+const inputClass = "w-full border border-onyx/10 bg-white px-4 py-3 text-sm outline-none transition-colors focus-visible:border-rose";
+const labelClass = "mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-onyx/45";
 
 /* ================= Customer Signup ================= */
 const signupSchema = z.object({

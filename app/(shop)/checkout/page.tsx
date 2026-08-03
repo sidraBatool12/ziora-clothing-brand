@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 
 type Address = { fullName: string; phone: string; line1: string; city: string; state: string; postalCode: string; country: string; };
 const emptyAddress: Address = { fullName: "", phone: "", line1: "", city: "", state: "", postalCode: "", country: "Pakistan" };
-const inputClass = "w-full border border-onyx/15 bg-white px-4 py-2.5 text-sm outline-none focus-visible:border-gold";
+const inputClass = "w-full border border-onyx/10 bg-white px-4 py-2.5 text-sm outline-none transition-colors focus-visible:border-rose";
 
 export default function CheckoutPage() {
   const router = useRouter();

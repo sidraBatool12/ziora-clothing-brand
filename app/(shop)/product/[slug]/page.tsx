@@ -3,8 +3,12 @@ import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/features/products/queries";
 import { ProductActions } from "@/components/product-actions";
 import { ProductSection } from "@/components/storefront-ui";
+import { Reveal } from "@/components/motion-reveal";
+import { formatPrice } from "@/lib/utils";
 
-interface PageProps { params: Promise<{ slug: string }>; }
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
 export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: PageProps) {
@@ -12,47 +16,93 @@ export default async function ProductPage({ params }: PageProps) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  // getProductBySlug() populates "category", so at runtime this is a full
-  // Category document — but ProductLean's static type still says ObjectId
-  // (Mongoose populate doesn't change TS types). Route through `unknown`
-  // rather than lying with a direct cast.
   const categoryId =
     typeof product.category === "string"
       ? product.category
       : (product.category as unknown as { _id: string })._id;
   const related = await getRelatedProducts(categoryId, product._id);
 
+  const hasDiscount = product.discountPrice > 0 && product.discountPrice < product.price;
+  const price =
+    hasDiscount ? product.discountPrice : product.price;
+
   return (
-    <main className="mx-auto max-w-7xl px-6 py-12 md:px-12">
-      <div className="grid gap-10 md:grid-cols-2">
-        <div className="space-y-3">
-          <div className="relative aspect-[3/4] overflow-hidden bg-beige/40">
-            <Image src={product.thumbnail.url} alt={product.name} fill className="object-cover" />
-          </div>
-          {product.images.length > 0 && (
-            <div className="grid grid-cols-4 gap-2">
-              {product.images.map((img, i) => (
-                <div key={i} className="relative aspect-square overflow-hidden bg-beige/40">
-                  <Image src={img.url} alt={img.alt || product.name} fill className="object-cover" />
+    <main>
+      <div className="page-shell py-10 md:py-16">
+        <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
+          <Reveal className="lg:col-span-7">
+            <div className="space-y-3">
+              <div className="relative aspect-[3/4] overflow-hidden bg-mist/50">
+                <Image
+                  src={product.thumbnail.url}
+                  alt={product.name}
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 55vw, 100vw"
+                  className="object-cover"
+                />
+                {hasDiscount && (
+                  <span className="absolute left-4 top-4 bg-onyx px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-white">
+                    Sale
+                  </span>
+                )}
+              </div>
+              {product.images.length > 0 && (
+                <div className="grid grid-cols-4 gap-2 md:gap-3">
+                  {product.images.map((img, i) => (
+                    <div key={i} className="relative aspect-square overflow-hidden bg-mist/50">
+                      <Image
+                        src={img.url}
+                        alt={img.alt || product.name}
+                        fill
+                        sizes="15vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-        <div>
-          <p className="eyebrow mb-2">{product.productLine}</p>
-          <h1 className="text-3xl text-onyx md:text-4xl">{product.name}</h1>
-          <p className="mt-4 text-sm text-onyx/70">{product.description}</p>
-          <div className="mt-6"><ProductActions product={product} /></div>
-          {(product.fabric || product.careInstructions) && (
-            <div className="mt-8 space-y-1 border-t border-onyx/10 pt-6 text-sm text-onyx/70">
-              {product.fabric && <p><strong>Fabric:</strong> {product.fabric}</p>}
-              {product.careInstructions && <p><strong>Care:</strong> {product.careInstructions}</p>}
+          </Reveal>
+
+          <Reveal delay={0.08} className="lg:col-span-5 lg:pt-4">
+            <p className="eyebrow mb-3">{product.productLine || "ZIORA"}</p>
+            <h1 className="text-3xl tracking-tight text-onyx md:text-4xl">{product.name}</h1>
+            <div className="mt-4 flex items-baseline gap-3">
+              <span className="text-xl font-medium text-onyx">{formatPrice(price)}</span>
+              {hasDiscount && (
+                <span className="text-sm text-onyx/35 line-through">{formatPrice(product.price)}</span>
+              )}
             </div>
-          )}
+            <p className="mt-5 max-w-[48ch] text-sm leading-relaxed text-onyx/65">{product.description}</p>
+            <div className="mt-8">
+              <ProductActions product={product} hidePrice />
+            </div>
+            {(product.fabric || product.careInstructions) && (
+              <div className="mt-10 space-y-3 border-t border-onyx/10 pt-8 text-sm text-onyx/65">
+                {product.fabric && (
+                  <p>
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-onyx/40">Fabric</span>
+                    <span className="mt-1 block text-onyx/100">{product.fabric}</span>
+                  </p>
+                )}
+                {product.careInstructions && (
+                  <p>
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-onyx/40">Care</span>
+                    <span className="mt-1 block text-onyx/100">{product.careInstructions}</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </Reveal>
         </div>
       </div>
-      <ProductSection eyebrow="You May Also Like" title="Related Products" viewAllHref="/shop" products={related} />
+      <ProductSection
+        eyebrow="You May Also Like"
+        title="Related Products"
+        viewAllHref="/shop"
+        products={related}
+      />
     </main>
   );
 }

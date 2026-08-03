@@ -1,10 +1,13 @@
 import { getProducts } from "@/features/products/queries";
 import { ProductCard } from "@/components/storefront-ui";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion-reveal";
 
 export const metadata = { title: "Shop" };
 export const dynamic = "force-dynamic";
 
-interface PageProps { searchParams: Promise<{ [key: string]: string | undefined }>; }
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+}
 
 export default async function ShopPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -19,33 +22,73 @@ export default async function ShopPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(total / perPage);
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-12 md:px-12">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow mb-2">Shop</p><h1 className="text-3xl text-onyx md:text-4xl">All Products</h1></div>
-        <form className="flex flex-wrap gap-3 text-xs" action="/shop" method="get">
-          <select name="sort" defaultValue={params.sort || "newest"} className="border border-onyx/20 px-3 py-2">
-            <option value="newest">Newest</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
-          <input name="search" defaultValue={params.search} placeholder="Search…" className="border border-onyx/20 px-3 py-2" />
-          <button className="bg-onyx px-4 py-2 text-white uppercase tracking-widest">Apply</button>
-        </form>
-      </div>
+    <main className="page-shell py-12 md:py-16">
+      <Reveal>
+        <div className="mb-10 flex flex-col gap-6 border-b border-onyx/10 pb-8 md:mb-12 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="eyebrow mb-3">Shop</p>
+            <h1 className="text-4xl tracking-tight text-onyx md:text-5xl">All Products</h1>
+            <p className="mt-3 text-sm text-onyx/50">{total} pieces</p>
+          </div>
+          <form className="flex flex-wrap gap-2 text-xs" action="/shop" method="get">
+            {params.category && <input type="hidden" name="category" value={params.category} />}
+            <select
+              name="sort"
+              defaultValue={params.sort || "newest"}
+              className="border border-onyx/10 bg-white px-3 py-2.5 outline-none focus-visible:border-rose"
+            >
+              <option value="newest">Newest</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+            </select>
+            <input
+              name="search"
+              defaultValue={params.search}
+              placeholder="Search…"
+              className="min-w-[160px] flex-1 border border-onyx/10 bg-white px-3 py-2.5 outline-none focus-visible:border-rose sm:flex-none"
+            />
+            <button type="submit" className="bg-onyx px-5 py-2.5 text-[11px] uppercase tracking-[0.16em] text-white transition-transform active:scale-[0.98]">
+              Apply
+            </button>
+          </form>
+        </div>
+      </Reveal>
 
       {products.length === 0 ? (
-        <p className="py-20 text-center text-onyx/60">No products match your filters.</p>
-      ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4">
-          {products.map((p) => <ProductCard key={p._id} product={p} />)}
+        <div className="py-24 text-center">
+          <p className="text-lg tracking-tight text-onyx">No pieces matched</p>
+          <p className="mt-2 text-sm text-onyx/50">Try clearing search or choosing another sort.</p>
+          <a href="/shop" className="btn-primary mt-8 inline-flex">
+            Reset filters
+          </a>
         </div>
+      ) : (
+        <Stagger className="grid grid-cols-2 gap-x-3 gap-y-10 md:gap-x-5 lg:grid-cols-4 lg:gap-y-14">
+          {products.map((p, i) => (
+            <StaggerItem key={p._id}>
+              <ProductCard product={p} index={i} />
+            </StaggerItem>
+          ))}
+        </Stagger>
       )}
 
       {totalPages > 1 && (
-        <div className="mt-12 flex justify-center gap-2 text-sm">
+        <div className="mt-14 flex justify-center gap-2 text-sm">
           {Array.from({ length: totalPages }).map((_, i) => (
-            <a key={i} href={`/shop?${new URLSearchParams({ ...params, page: String(i + 1) } as Record<string, string>).toString()}`}
-              className={`h-8 w-8 flex items-center justify-center border ${page === i + 1 ? "border-gold text-gold" : "border-onyx/20"}`}>
+            <a
+              key={i}
+              href={`/shop?${new URLSearchParams({
+                ...Object.fromEntries(
+                  Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
+                ),
+                page: String(i + 1),
+              }).toString()}`}
+              className={`flex h-9 w-9 items-center justify-center border transition-colors ${
+                page === i + 1
+                  ? "border-rose bg-rose text-white"
+                  : "border-onyx/10 hover:border-onyx"
+              }`}
+            >
               {i + 1}
             </a>
           ))}
