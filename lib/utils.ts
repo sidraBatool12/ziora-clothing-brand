@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 export function formatPrice(amount: number, currency = "PKR") {
   return new Intl.NumberFormat("en-PK", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }
-export function generateOrderNumber() {
-  return `ZR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+export function generateOrderNumber(prefix = "ZR") {
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 export function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();

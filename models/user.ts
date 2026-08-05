@@ -16,11 +16,15 @@ export interface IAddress {
 export interface IUser {
   name: string;
   email: string;
-  phone: string;
-  passwordHash: string;
+  phone?: string;
+  passwordHash?: string;
   role: "customer" | "admin";
   isVerified: boolean;
   avatar?: string;
+  avatarPublicId?: string;
+  providers: ("credentials" | "google")[];
+  lastLoginAt?: Date;
+  sessionVersion: number;
   addresses: IAddress[];
   createdAt: Date;
   updatedAt: Date;
@@ -42,11 +46,18 @@ const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, index: true },
-    phone: { type: String, required: true },
-    passwordHash: { type: String, required: true },
+    phone: { type: String, trim: true },
+    passwordHash: { type: String, select: false },
     role: { type: String, enum: ["customer", "admin"], default: "customer" },
     isVerified: { type: Boolean, default: false },
     avatar: String,
+    avatarPublicId: String,
+    providers: {
+      type: [{ type: String, enum: ["credentials", "google"] }],
+      default: ["credentials"],
+    },
+    lastLoginAt: Date,
+    sessionVersion: { type: Number, default: 0, min: 0 },
     addresses: { type: [addressSchema], default: [] },
   },
   { timestamps: true }

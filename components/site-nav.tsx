@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import {
   BagSimple,
+  Bell,
   Heart,
   MagnifyingGlass,
   User,
@@ -13,6 +15,9 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { AccountMenu } from "@/components/account-menu";
+import { UserAvatar } from "@/components/user-avatar";
+import { useGoogleProvider } from "@/hooks/use-google-provider";
 
 const LINKS = [
   { href: "/shop", label: "Shop" },
@@ -44,6 +49,10 @@ export function SiteNav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
+  const googleEnabled = useGoogleProvider();
+  const currentUser = session?.user;
+  const isAdmin = currentUser?.role === "admin";
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
 
   useEffect(() => {
@@ -139,32 +148,69 @@ export function SiteNav() {
             >
               <MagnifyingGlass size={20} weight="light" />
             </Link>
-            <Link
-              href="/dashboard/wishlist"
-              className="flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx"
-              aria-label="Wishlist"
-            >
-              <Heart size={20} weight="light" />
-            </Link>
-            <Link
-              href="/cart"
-              className="relative flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx"
-              aria-label="Cart"
-            >
-              <BagSimple size={20} weight="light" />
-              {mounted && itemCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose px-1 text-[9px] font-medium text-white">
-                  {itemCount}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/login"
-              className="flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx"
-              aria-label="Account"
-            >
-              <User size={20} weight="light" />
-            </Link>
+            {status === "authenticated" && currentUser ? (
+              <>
+                {!isAdmin && (
+                  <>
+                    <Link
+                      href="/dashboard/wishlist"
+                      className="flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx"
+                      aria-label="Wishlist"
+                    >
+                      <Heart size={20} weight="light" />
+                    </Link>
+                    <Link
+                      href="/cart"
+                      className="relative flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx"
+                      aria-label="Cart"
+                    >
+                      <BagSimple size={20} weight="light" />
+                      {mounted && itemCount > 0 && (
+                        <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose px-1 text-[9px] font-medium text-white">
+                          {itemCount}
+                        </span>
+                      )}
+                    </Link>
+                  </>
+                )}
+                <Link
+                  href={isAdmin ? "/admin" : "/dashboard/notifications"}
+                  className="flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx"
+                  aria-label="Notifications"
+                >
+                  <Bell size={20} weight="light" />
+                </Link>
+                <AccountMenu
+                  name={currentUser.name}
+                  email={currentUser.email}
+                  image={currentUser.image}
+                  isAdmin={isAdmin}
+                />
+              </>
+            ) : status === "unauthenticated" ? (
+              <>
+                <Link href="/login" className="hidden text-[10px] uppercase tracking-[0.15em] text-onyx/70 lg:block">Login</Link>
+                <Link href="/signup" className="hidden text-[10px] uppercase tracking-[0.15em] text-onyx/70 lg:block">Register</Link>
+                {googleEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                    className="hidden rounded-full border border-onyx/15 px-3 py-2 text-[9px] uppercase tracking-[0.12em] text-onyx/70 xl:block"
+                  >
+                    Continue with Google
+                  </button>
+                )}
+                <Link
+                  href="/login"
+                  className="flex h-10 w-10 items-center justify-center text-onyx/70 transition-colors hover:text-onyx lg:hidden"
+                  aria-label="Login"
+                >
+                  <User size={20} weight="light" />
+                </Link>
+              </>
+            ) : (
+              <span className="h-8 w-8 animate-pulse rounded-full bg-onyx/10" aria-hidden />
+            )}
           </div>
         </nav>
       </header>
@@ -219,14 +265,44 @@ export function SiteNav() {
                   </motion.li>
                 ))}
               </ul>
-              <div className="mt-8 flex gap-3">
-                <Link href="/login" className="btn-primary flex-1">
-                  Account
+              {currentUser && (
+                <Link
+                  href={isAdmin ? "/admin/profile" : "/dashboard/profile"}
+                  className="mt-8 flex items-center gap-3 rounded-2xl border border-onyx/10 bg-white px-4 py-3.5"
+                >
+                  <UserAvatar name={currentUser.name} image={currentUser.image} size={44} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-onyx">
+                      {currentUser.name || "ZIORA Member"}
+                    </span>
+                    <span className="block truncate text-[11px] text-onyx/50">{currentUser.email}</span>
+                  </span>
+                  {isAdmin && (
+                    <span className="rounded-full bg-rose/10 px-2 py-1 text-[9px] uppercase tracking-[0.12em] text-rose">
+                      Admin
+                    </span>
+                  )}
+                </Link>
+              )}
+
+              <div className={cn("flex gap-3", currentUser ? "mt-3" : "mt-8")}>
+                <Link href={currentUser ? (isAdmin ? "/admin" : "/dashboard") : "/login"} className="btn-primary flex-1">
+                  {currentUser ? "Dashboard" : "Login"}
                 </Link>
                 <Link href="/cart" className="btn-secondary flex-1">
                   Cart{mounted && itemCount > 0 ? ` (${itemCount})` : ""}
                 </Link>
               </div>
+              {!currentUser && (
+                <div className={cn("mt-3 grid gap-3", googleEnabled ? "grid-cols-2" : "grid-cols-1")}>
+                  <Link href="/signup" className="btn-secondary">Register</Link>
+                  {googleEnabled && (
+                    <button type="button" onClick={() => signIn("google", { callbackUrl: "/dashboard" })} className="btn-secondary">
+                      Google
+                    </button>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

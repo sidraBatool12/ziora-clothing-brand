@@ -4,3 +4,4 @@ out/
 .env
 .env.local
 *.log
+public/uploads/

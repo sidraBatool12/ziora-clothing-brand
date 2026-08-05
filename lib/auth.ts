@@ -1,57 +1,15 @@
-import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth-options";
 import { connectDB } from "@/lib/db";
 import { User, IUser } from "@/models/user";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
-const COOKIE_NAME = "ziora_token";
-
-export interface JwtPayload {
-  userId: string;
-  email: string;
-  role: "customer" | "admin";
-}
-
-export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
-}
-
-export function verifyToken(token: string): JwtPayload | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
-
-export async function setAuthCookie(payload: JwtPayload) {
-  const token = signToken(payload);
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-}
-
-export async function clearAuthCookie() {
-  const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
-}
-
 export async function getCurrentUser(): Promise<(IUser & { _id: string }) | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-
-  const payload = verifyToken(token);
-  if (!payload) return null;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return null;
 
   await connectDB();
-  const user = await User.findById(payload.userId).lean();
+  const user = await User.findById(session.user.id).lean();
   return user ? JSON.parse(JSON.stringify(user)) : null;
 }
 
@@ -59,12 +17,13 @@ export async function getCurrentUser(): Promise<(IUser & { _id: string }) | null
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (user.role === "admin") redirect("/admin");
   return user;
 }
 
 export async function requireAdmin() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/admin/login");
   if (user.role !== "admin") redirect("/");
   return user;
 }

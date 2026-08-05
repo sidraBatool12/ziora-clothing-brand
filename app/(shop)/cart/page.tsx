@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Minus, Plus, Trash } from "@phosphor-icons/react";
 import { useCartStore } from "@/store";
 import { formatPrice } from "@/lib/utils";
+import { useStoreSettings } from "@/hooks/use-store-settings";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCartStore();
+  const storeSettings = useStoreSettings();
 
   if (items.length === 0) {
     return (
@@ -25,7 +27,8 @@ export default function CartPage() {
   }
 
   const sub = subtotal();
-  const shipping = sub > 10000 ? 0 : 250;
+  const shipping =
+    sub >= storeSettings.freeShippingThreshold ? 0 : storeSettings.shippingFee;
   const total = sub + shipping;
 
   return (

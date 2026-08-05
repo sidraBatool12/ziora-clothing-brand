@@ -1,146 +1,84 @@
 # ZIORA — Grace Beyond Modesty
 
-ZIORA is a modern luxury modest fashion e-commerce platform designed to deliver a premium online shopping experience. Inspired by high-end fashion brands, ZIORA combines elegant design, seamless user experience, and powerful full-stack functionality.
+ZIORA is a modern luxury modest fashion e-commerce platform built with Next.js App Router, MongoDB, Auth.js, Cloudinary, and Tailwind CSS.
 
-## Features
+## Authentication
 
-### Customer Experience
+- Email + password (customer registration only)
+- Google OAuth (auto-create customer, never auto-promote admin) — only offered when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set
+- Persistent JWT sessions for 30 days
+- Role-separated dashboards (`customer` / `admin`)
+- Public admin registration is disabled
 
-* User Registration & Authentication
-* Secure Login System
-* Product Browsing & Search
-* Product Details Pages
-* Shopping Cart Management
-* Order Placement & Tracking
-* Responsive Mobile Experience
-* Personalized User Dashboard
+Required env vars: `MONGODB_URI`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 
-### Admin Features
+```bash
+# Generate a secret
+openssl rand -base64 32
+```
 
-* Product Management
-* Inventory Control
-* Order Management
-* Customer Management
-* Sales Monitoring
-* Dashboard Analytics
+Create an admin account with:
 
-### Security
+```bash
+npm run create-admin
+```
 
-* Protected Routes
-* Secure Authentication with NextAuth
-* Environment Variable Protection
-* Session Management
+If OTP email cannot be delivered (offline / SMTP failure), the signup still succeeds and the OTP is printed in the server console in development. To unlock accounts that were created before that fix:
 
-## Tech Stack
-
-### Frontend
-
-* Next.js 15
-* React
-* TypeScript
-* Tailwind CSS
-* ShadCN UI
-
-### Backend
-
-* Next.js API Routes
-* NextAuth Authentication
-
-### Database
-
-* MongoDB
-
-### Additional Tools
-
-* Nodemailer
-* Git & GitHub
-
-## Project Structure
-
-```text
-app/
-components/
-emails/
-features/
-lib/
-models/
-providers/
-store/
-middleware.ts
-next.config.ts
-tailwind.config.ts
-package.json
+```bash
+npm run diagnose:auth
+npm run verify-user -- --all-unverified
+# or a single address:
+npm run verify-user -- you@example.com
 ```
 
 ## Getting Started
 
-### Clone the Repository
-
-```bash
-git clone https://github.com/sidraBatool12/ziora-clothing-brand.git
-```
-
-### Install Dependencies
-
 ```bash
 npm install
-```
-
-### Configure Environment Variables
-
-Create a `.env.local` file:
-
-```env
-MONGODB_URI=your_mongodb_connection
-NEXTAUTH_SECRET=your_secret
-NEXTAUTH_URL=http://localhost:3000
-EMAIL_USER=your_email
-EMAIL_PASS=your_password
-```
-
-### Run Development Server
-
-```bash
+cp .env.example .env.local
+# Fill NEXTAUTH_SECRET, NEXTAUTH_URL=http://localhost:3000, and MONGODB_URI
+npm run create-admin
 npm run dev
 ```
 
-Open:
+Open [http://localhost:3000](http://localhost:3000)
+
+## Environment
+
+See `.env.example` for:
+
+- MongoDB
+- Auth.js / NextAuth secrets (`NEXTAUTH_SECRET`, `NEXTAUTH_URL`)
+- Google OAuth credentials (optional — when blank, the Google button is hidden)
+- Cloudinary
+- Email/OTP
+
+Google callback URL:
 
 ```text
-http://localhost:3000
+http://localhost:3000/api/auth/callback/google
 ```
 
-## Brand Identity
+## Tests
 
-**Brand Name:** ZIORA
+```bash
+npm test
+```
 
-**Tagline:** Grace Beyond Modesty
+## Tech Stack
 
-**Inspired By:** Dior, Chanel, and Elie Saab
+- Next.js 16 (App Router)
+- React 19 + TypeScript
+- Tailwind CSS
+- Auth.js (`next-auth`)
+- MongoDB + Mongoose
+- Cloudinary
+- Nodemailer
+- Vitest
 
-### Color Palette
+## Brand
 
-* Black (#0F0F0F)
-* Gold (#D4AF37)
-* Ivory (#F8F5F0)
-* Beige (#E8DDCF)
-* White (#FFFFFF)
+**ZIORA** — Grace Beyond Modesty
 
-## Future Enhancements
-
-* Payment Gateway Integration
-* Wishlist Functionality
-* Product Reviews & Ratings
-* Multi-Language Support
-* AI-Powered Recommendations
-* Advanced Analytics Dashboard
-
-## Developer
-
-**Sidra Batool**
-
-Full-Stack Developer focused on building modern, scalable, and user-centric web applications.
-
----
-
-© 2026 ZIORA — Grace Beyond Modesty
+© 2026 ZIORA

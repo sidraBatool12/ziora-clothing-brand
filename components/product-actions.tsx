@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Heart, Minus, Plus, Check } from "@phosphor-icons/react";
 import { useCartStore, useWishlistStore } from "@/store";
 import type { ProductLean } from "@/features/products/queries";
@@ -16,6 +17,7 @@ export function ProductActions({
   hidePrice?: boolean;
 }) {
   const router = useRouter();
+  const { status } = useSession();
   const [size, setSize] = useState(product.sizes[0] || "");
   const [color, setColor] = useState(product.colors[0] || "");
   const [quantity, setQuantity] = useState(1);
@@ -24,6 +26,7 @@ export function ProductActions({
   const inWishlist = useWishlistStore((s) => s.has(product._id));
   const [added, setAdded] = useState(false);
   const [stockWarning, setStockWarning] = useState<string | null>(null);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
 
   const outOfStock = product.stockQuantity <= 0;
   const price =
@@ -63,6 +66,29 @@ export function ProductActions({
     }
     handleAddToCart();
     router.push("/checkout");
+  }
+
+  async function handleWishlistToggle() {
+    if (wishlistBusy) return;
+    if (status !== "authenticated") {
+      router.push(`/login?redirect=/product/${product.slug}`);
+      return;
+    }
+
+    setWishlistBusy(true);
+    toggleWishlist(product._id);
+    try {
+      const res = await fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product._id }),
+      });
+      if (!res.ok) toggleWishlist(product._id);
+    } catch {
+      toggleWishlist(product._id);
+    } finally {
+      setWishlistBusy(false);
+    }
   }
 
   return (
@@ -170,7 +196,8 @@ export function ProductActions({
         </button>
         <button
           type="button"
-          onClick={() => toggleWishlist(product._id)}
+          onClick={handleWishlistToggle}
+          disabled={wishlistBusy}
           aria-label="Toggle wishlist"
           className={cn(
             "flex h-12 w-12 shrink-0 items-center justify-center border transition-all duration-300 active:scale-[0.98]",

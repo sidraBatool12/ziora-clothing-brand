@@ -4,7 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 
-const STATUSES = ["pending", "confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"];
+const STATUSES = [
+  "pending",
+  "confirmed",
+  "packed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "returned",
+  "refunded",
+];
 
 interface OrderRowProps {
   order: {

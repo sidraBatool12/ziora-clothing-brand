@@ -40,20 +40,30 @@ export const MEMORY_MOCK_PRODUCTS: ProductLean[] = MOCK_PRODUCTS.map((p, index) 
     name: p.name,
     slug: p.slug,
     description: p.description,
+    shortDescription: p.description.slice(0, 120),
     price: p.price,
     discountPrice: p.discountPrice,
     category: categoryIdBySlug.get(p.categorySlug) as unknown as IProduct["category"],
     productLine: p.productLine,
+    brand: "ZIORA",
     sku: p.sku,
     sizes: p.sizes,
     colors: p.colors,
+    material: p.fabric,
     fabric: p.fabric,
     careInstructions: p.careInstructions,
+    tags: [p.productLine],
     images,
     thumbnail,
+    variants: [],
     stockQuantity: p.stockQuantity,
+    lowStockThreshold: 5,
     isNewArrival: p.isNewArrival,
     isFeatured: p.isFeatured,
+    isTrending: false,
+    isBestSeller: false,
+    publishStatus: "published",
+    seoKeywords: [],
     ratingAverage: 4.2 + (index % 7) / 10,
     ratingCount: 12 + (index % 40),
     createdAt: created as unknown as Date,
@@ -61,8 +71,8 @@ export const MEMORY_MOCK_PRODUCTS: ProductLean[] = MOCK_PRODUCTS.map((p, index) 
   } as ProductLean;
 });
 
-function serialize<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
+function serialize<T>(value: unknown): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 async function tryConnect(): Promise<boolean> {
@@ -77,25 +87,34 @@ async function tryConnect(): Promise<boolean> {
 export async function getFeaturedProducts(limit = 8): Promise<ProductLean[]> {
   if (await tryConnect()) {
     try {
-      const docs = await Product.find({ isFeatured: true }).sort({ createdAt: -1 }).limit(limit).lean();
-      if (docs.length) return serialize(docs);
+      const docs = await Product.find({
+        isFeatured: true,
+        publishStatus: { $nin: ["draft", "hidden", "archived"] },
+      })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+      if (docs.length) return serialize<ProductLean[]>(docs);
     } catch {
       /* use mocks */
     }
   }
-  return serialize(MEMORY_MOCK_PRODUCTS.filter((p) => p.isFeatured).slice(0, limit));
+  return serialize<ProductLean[]>(MEMORY_MOCK_PRODUCTS.filter((p) => p.isFeatured).slice(0, limit));
 }
 
 export async function getNewArrivals(limit = 8): Promise<ProductLean[]> {
   if (await tryConnect()) {
     try {
-      const docs = await Product.find({ isNewArrival: true }).sort({ createdAt: -1 }).limit(limit).lean();
-      if (docs.length) return serialize(docs);
+      const docs = await Product.find({ isNewArrival: true, publishStatus: { $ne: "archived" } })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+      if (docs.length) return serialize<ProductLean[]>(docs);
     } catch {
       /* use mocks */
     }
   }
-  return serialize(MEMORY_MOCK_PRODUCTS.filter((p) => p.isNewArrival).slice(0, limit));
+  return serialize<ProductLean[]>(MEMORY_MOCK_PRODUCTS.filter((p) => p.isNewArrival).slice(0, limit));
 }
 
 export interface ShopFilters {
@@ -136,7 +155,9 @@ export async function getProducts(filters: ShopFilters) {
 
   if (await tryConnect()) {
     try {
-      const query: Record<string, unknown> = {};
+      const query: Record<string, unknown> = {
+        publishStatus: { $nin: ["draft", "hidden", "archived"] },
+      };
       if (filters.category) query.category = filters.category;
       if (filters.minPrice || filters.maxPrice) {
         query.price = {
@@ -163,7 +184,7 @@ export async function getProducts(filters: ShopFilters) {
         Product.countDocuments(query),
       ]);
       if (total > 0) {
-        return { products: serialize(docs) as ProductLean[], total, page, perPage };
+        return { products: serialize<ProductLean[]>(docs), total, page, perPage };
       }
     } catch {
       /* use mocks */
@@ -173,7 +194,7 @@ export async function getProducts(filters: ShopFilters) {
   const list = filterMocks(filters);
   const start = (page - 1) * perPage;
   return {
-    products: serialize(list.slice(start, start + perPage)),
+    products: serialize<ProductLean[]>(list.slice(start, start + perPage)),
     total: list.length,
     page,
     perPage,
@@ -183,8 +204,13 @@ export async function getProducts(filters: ShopFilters) {
 export async function getProductBySlug(slug: string): Promise<ProductLean | null> {
   if (await tryConnect()) {
     try {
-      const doc = await Product.findOne({ slug }).populate("category").lean();
-      if (doc) return serialize(doc);
+      const doc = await Product.findOne({
+        slug,
+        publishStatus: { $nin: ["draft", "hidden", "archived"] },
+      })
+        .populate("category")
+        .lean();
+      if (doc) return serialize<ProductLean>(doc);
     } catch {
       /* use mocks */
     }
@@ -192,7 +218,7 @@ export async function getProductBySlug(slug: string): Promise<ProductLean | null
   const mock = MEMORY_MOCK_PRODUCTS.find((p) => p.slug === slug);
   if (!mock) return null;
   const cat = MOCK_CATEGORY_DOCS.find((c) => c._id === String(mock.category));
-  return serialize({
+  return serialize<ProductLean>({
     ...mock,
     category: cat ? { _id: cat._id, name: cat.name, slug: cat.slug } : mock.category,
   } as ProductLean);
@@ -205,15 +231,19 @@ export async function getRelatedProducts(
 ): Promise<ProductLean[]> {
   if (await tryConnect()) {
     try {
-      const docs = await Product.find({ category: categoryId, _id: { $ne: excludeId } })
+      const docs = await Product.find({
+        category: categoryId,
+        _id: { $ne: excludeId },
+        publishStatus: { $nin: ["draft", "hidden", "archived"] },
+      })
         .limit(limit)
         .lean();
-      if (docs.length) return serialize(docs);
+      if (docs.length) return serialize<ProductLean[]>(docs);
     } catch {
       /* use mocks */
     }
   }
-  return serialize(
+  return serialize<ProductLean[]>(
     MEMORY_MOCK_PRODUCTS.filter(
       (p) => String(p.category) === categoryId && p._id !== excludeId
     ).slice(0, limit)

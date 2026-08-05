@@ -1,28 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store";
 import { formatPrice } from "@/lib/utils";
+import { useStoreSettings } from "@/hooks/use-store-settings";
 
 type Address = { fullName: string; phone: string; line1: string; city: string; state: string; postalCode: string; country: string; };
 const emptyAddress: Address = { fullName: "", phone: "", line1: "", city: "", state: "", postalCode: "", country: "Pakistan" };
 const inputClass = "w-full border border-onyx/10 bg-white px-4 py-2.5 text-sm outline-none transition-colors focus-visible:border-rose";
 
+type PaymentMethod = "cod" | "easypaisa" | "jazzcash" | "bank_transfer";
+
+const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+  cod: "Cash on Delivery",
+  easypaisa: "EasyPaisa",
+  jazzcash: "JazzCash",
+  bank_transfer: "Bank Transfer",
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
+  const { status } = useSession();
   const { items, subtotal, clear } = useCartStore();
+  const storeSettings = useStoreSettings();
   const [step, setStep] = useState(0); // 0 address, 1 payment, 2 review
   const [address, setAddress] = useState<Address>(emptyAddress);
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "easypaisa" | "bank_transfer">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [transactionId, setTransactionId] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login?redirect=/checkout");
+    }
+  }, [status, router]);
+
+  const availableMethods: PaymentMethod[] = [
+    storeSettings.codEnabled && "cod",
+    storeSettings.easypaisaEnabled && "easypaisa",
+    storeSettings.jazzcashEnabled && "jazzcash",
+    storeSettings.bankTransferEnabled && "bank_transfer",
+  ].filter(Boolean) as PaymentMethod[];
+
+  const manualAccounts: Record<Exclude<PaymentMethod, "cod">, { label: string; value: string }[]> = {
+    easypaisa: [
+      { label: "Account title", value: storeSettings.easypaisaAccountName },
+      { label: "Account number", value: storeSettings.easypaisaAccountNumber },
+    ],
+    jazzcash: [
+      { label: "Account title", value: storeSettings.jazzcashAccountName },
+      { label: "Account number", value: storeSettings.jazzcashAccountNumber },
+    ],
+    bank_transfer: [
+      { label: "Bank", value: storeSettings.bankName },
+      { label: "Account title", value: storeSettings.bankAccountName },
+      { label: "Account number", value: storeSettings.bankAccountNumber },
+      { label: "IBAN", value: storeSettings.bankIban },
+    ],
+  };
+
+  const firstAvailable = availableMethods[0];
+  useEffect(() => {
+    if (availableMethods.includes(paymentMethod) || !firstAvailable) return;
+    setPaymentMethod(firstAvailable);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentMethod, firstAvailable, availableMethods.join(",")]);
+
   const sub = subtotal();
-  const shipping = sub > 10000 ? 0 : 250;
+  const shipping =
+    sub >= storeSettings.freeShippingThreshold ? 0 : storeSettings.shippingFee;
   const total = sub + shipping;
 
   function update(field: keyof Address, val: string) {
@@ -39,6 +90,11 @@ export default function CheckoutPage() {
   }
 
   async function placeOrder() {
+    if (paymentMethod !== "cod" && !proofFile) {
+      setError("Please upload your payment screenshot.");
+      return;
+    }
+
     setPlacing(true);
     setError(null);
 
@@ -58,7 +114,16 @@ export default function CheckoutPage() {
       const res = await fetch("/api/orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items, address, paymentMethod, transactionId: transactionId || undefined, paymentProof,
+          items: items.map((item) => ({
+            productId: item.productId,
+            size: item.size,
+            color: item.color,
+            quantity: item.quantity,
+          })),
+          address,
+          paymentMethod,
+          transactionId: transactionId || undefined,
+          paymentProof,
         }),
       });
       const data = await res.json();
@@ -71,6 +136,10 @@ export default function CheckoutPage() {
     } finally {
       setPlacing(false);
     }
+  }
+
+  if (status === "loading" || status === "unauthenticated") {
+    return <main className="mx-auto max-w-lg px-6 py-24 text-center"><p className="text-onyx/70">Checking your session…</p></main>;
   }
 
   if (orderNumber) {
@@ -117,46 +186,48 @@ export default function CheckoutPage() {
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-lg text-onyx">Payment Method</h2>
-              <label className={`block border p-4 text-sm ${paymentMethod === "cod" ? "border-gold" : "border-onyx/15"}`}>
-                <span className="flex items-center gap-3">
-                  <input type="radio" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} />
-                  Cash on Delivery
-                </span>
-              </label>
 
-              <label className={`block border p-4 text-sm ${paymentMethod === "easypaisa" ? "border-gold" : "border-onyx/15"}`}>
-                <span className="flex items-center gap-3">
-                  <input type="radio" checked={paymentMethod === "easypaisa"} onChange={() => setPaymentMethod("easypaisa")} />
-                  EasyPaisa
-                </span>
-              </label>
-              {paymentMethod === "easypaisa" && (
-                <div className="ml-7 space-y-3 border-l-2 border-gold/30 pl-4 text-sm">
-                  <p className="text-onyx/70">
-                    Send payment to <strong>{process.env.NEXT_PUBLIC_EASYPAISA_ACCOUNT_NAME || "ZIORA Official"}</strong> —{" "}
-                    <strong>{process.env.NEXT_PUBLIC_EASYPAISA_ACCOUNT_NUMBER || "03XX-XXXXXXX"}</strong>
-                  </p>
-                  <input placeholder="Transaction ID" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className={inputClass} />
-                  <input type="file" accept="image/*" onChange={(e) => setProofFile(e.target.files?.[0] || null)} className="text-xs" />
-                </div>
+              {availableMethods.length === 0 && (
+                <p className="border border-rose/20 bg-rose/[0.05] p-4 text-sm text-rose">
+                  Checkout is temporarily unavailable. Please contact ZIORA support.
+                </p>
               )}
 
-              <label className={`block border p-4 text-sm ${paymentMethod === "bank_transfer" ? "border-gold" : "border-onyx/15"}`}>
-                <span className="flex items-center gap-3">
-                  <input type="radio" checked={paymentMethod === "bank_transfer"} onChange={() => setPaymentMethod("bank_transfer")} />
-                  Bank Transfer
-                </span>
-              </label>
-              {paymentMethod === "bank_transfer" && (
-                <div className="ml-7 space-y-3 border-l-2 border-gold/30 pl-4 text-sm">
-                  <p className="text-onyx/70">
-                    {process.env.NEXT_PUBLIC_BANK_NAME || "Bank Name"} — {process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME || "ZIORA Official"}<br />
-                    IBAN: {process.env.NEXT_PUBLIC_BANK_IBAN || "PKXX XXXX XXXX XXXX XXXX XXXX"}
-                  </p>
-                  <input placeholder="Transaction ID" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className={inputClass} />
-                  <input type="file" accept="image/*" onChange={(e) => setProofFile(e.target.files?.[0] || null)} className="text-xs" />
+              {availableMethods.map((method) => (
+                <div key={method}>
+                  <label className={`block border p-4 text-sm ${paymentMethod === method ? "border-gold" : "border-onyx/15"}`}>
+                    <span className="flex items-center gap-3">
+                      <input type="radio" checked={paymentMethod === method} onChange={() => setPaymentMethod(method)} />
+                      {PAYMENT_LABELS[method]}
+                    </span>
+                  </label>
+
+                  {method !== "cod" && paymentMethod === method && (
+                    <div className="ml-7 mt-3 space-y-3 border-l-2 border-gold/30 pl-4 text-sm">
+                      <dl className="space-y-1 text-onyx/70">
+                        {manualAccounts[method]
+                          .filter((detail) => detail.value)
+                          .map((detail) => (
+                            <div key={detail.label} className="flex gap-2">
+                              <dt className="min-w-28 text-onyx/50">{detail.label}</dt>
+                              <dd className="font-medium text-onyx">{detail.value}</dd>
+                            </div>
+                          ))}
+                      </dl>
+                      {storeSettings.paymentInstructions && (
+                        <p className="text-xs leading-relaxed text-onyx/60">{storeSettings.paymentInstructions}</p>
+                      )}
+                      <input placeholder="Transaction ID" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className={inputClass} />
+                      <div>
+                        <label className="block text-xs text-onyx/60">
+                          Payment screenshot (required)
+                          <input type="file" accept="image/*" onChange={(e) => setProofFile(e.target.files?.[0] || null)} className="mt-1 block text-xs" />
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           )}
 
@@ -164,7 +235,7 @@ export default function CheckoutPage() {
             <div className="space-y-4 text-sm">
               <h2 className="text-lg text-onyx">Review Your Order</h2>
               <div><strong>Ship to:</strong> {address.fullName}, {address.line1}, {address.city}</div>
-              <div><strong>Payment:</strong> {paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "easypaisa" ? "EasyPaisa" : "Bank Transfer"}</div>
+              <div><strong>Payment:</strong> {PAYMENT_LABELS[paymentMethod]}</div>
               <ul className="divide-y divide-onyx/10 border-t border-onyx/10">
                 {items.map((i) => (
                   <li key={`${i.productId}-${i.size}`} className="flex justify-between py-2">

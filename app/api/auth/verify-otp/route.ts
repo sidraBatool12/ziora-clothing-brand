@@ -4,10 +4,9 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User, OtpToken } from "@/models/user";
-import { setAuthCookie } from "@/lib/auth";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
   otp: z.string().length(6),
   purpose: z.enum(["verify", "reset"]).default("verify"),
 });
@@ -30,8 +29,7 @@ export async function POST(req: NextRequest) {
   if (purpose === "verify") {
     const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { new: true });
     if (!user) return NextResponse.json({ error: "Account not found." }, { status: 404 });
-    await setAuthCookie({ userId: user._id.toString(), email: user.email, role: user.role });
-    return NextResponse.json({ success: true, role: user.role, redirect: user.role === "admin" ? "/admin" : "/dashboard" });
+    return NextResponse.json({ success: true, redirect: "/login?verified=1" });
   }
 
   // purpose === "reset": issue a short-lived, single-purpose reset token

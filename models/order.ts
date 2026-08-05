@@ -1,31 +1,47 @@
 import { Schema, model, models, Types, Model } from "mongoose";
 
 export type OrderStatus =
-  | "pending" | "confirmed" | "processing" | "packed"
-  | "shipped" | "out_for_delivery" | "delivered" | "cancelled";
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "packed"
+  | "shipped"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled"
+  | "returned"
+  | "refunded";
 
-export type PaymentMethod = "cod" | "easypaisa" | "bank_transfer";
+export type PaymentMethod = "cod" | "easypaisa" | "jazzcash" | "bank_transfer" | "stripe" | "paypal";
 export type PaymentStatus = "pending" | "verification_pending" | "paid" | "rejected" | "refunded";
 
 export interface IOrderItem {
   product: Types.ObjectId;
+  variantId?: string;
   name: string;
   image: string;
   size: string;
   color: string;
   quantity: number;
   unitPrice: number;
+  sku?: string;
 }
 
 export interface IAddressSnapshot {
-  fullName: string; phone: string; line1: string;
-  city: string; state: string; postalCode: string; country: string;
+  fullName: string;
+  phone: string;
+  line1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
 }
 
 export interface IShippingDetails {
   courierName?: string;
   trackingNumber?: string;
   estimatedDelivery?: Date;
+  status?: string;
 }
 
 export interface IOrder {
@@ -35,11 +51,13 @@ export interface IOrder {
   address: IAddressSnapshot;
   totalAmount: number;
   status: OrderStatus;
-  statusHistory: { status: OrderStatus; at: Date }[];
+  statusHistory: { status: OrderStatus; at: Date; note?: string }[];
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   paymentProof?: { url: string; publicId: string };
   transactionId?: string;
+  couponCode?: string;
+  discountAmount?: number;
   shippingDetails: IShippingDetails;
   cancelledAt?: Date;
   createdAt: Date;
@@ -49,23 +67,38 @@ export interface IOrder {
 const orderItemSchema = new Schema<IOrderItem>(
   {
     product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    name: String, image: String, size: String, color: String,
+    variantId: String,
+    name: String,
+    image: String,
+    size: String,
+    color: String,
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true },
+    sku: String,
   },
   { _id: false }
 );
 
 const addressSnapshotSchema = new Schema<IAddressSnapshot>(
   {
-    fullName: String, phone: String, line1: String,
-    city: String, state: String, postalCode: String, country: String,
+    fullName: String,
+    phone: String,
+    line1: String,
+    city: String,
+    state: String,
+    postalCode: String,
+    country: String,
   },
   { _id: false }
 );
 
 const shippingDetailsSchema = new Schema<IShippingDetails>(
-  { courierName: String, trackingNumber: String, estimatedDelivery: Date },
+  {
+    courierName: String,
+    trackingNumber: String,
+    estimatedDelivery: Date,
+    status: String,
+  },
   { _id: false }
 );
 
@@ -78,15 +111,30 @@ const orderSchema = new Schema<IOrder>(
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"],
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "packed",
+        "shipped",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "returned",
+        "refunded",
+      ],
       default: "pending",
       index: true,
     },
     statusHistory: {
-      type: [{ status: String, at: { type: Date, default: () => new Date() } }],
+      type: [{ status: String, at: { type: Date, default: () => new Date() }, note: String }],
       default: [],
     },
-    paymentMethod: { type: String, enum: ["cod", "easypaisa", "bank_transfer"], required: true },
+    paymentMethod: {
+      type: String,
+      enum: ["cod", "easypaisa", "jazzcash", "bank_transfer", "stripe", "paypal"],
+      required: true,
+    },
     paymentStatus: {
       type: String,
       enum: ["pending", "verification_pending", "paid", "rejected", "refunded"],
@@ -95,6 +143,8 @@ const orderSchema = new Schema<IOrder>(
     },
     paymentProof: { url: String, publicId: String },
     transactionId: String,
+    couponCode: String,
+    discountAmount: { type: Number, default: 0 },
     shippingDetails: { type: shippingDetailsSchema, default: {} },
     cancelledAt: Date,
   },
