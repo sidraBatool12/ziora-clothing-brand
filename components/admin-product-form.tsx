@@ -52,7 +52,7 @@ const emptyForm = {
   seoKeywords: "",
   publishStatus: "published",
   isFeatured: false,
-  isNewArrival: false,
+  isNewArrival: true,
   isTrending: false,
   isBestSeller: false,
 };

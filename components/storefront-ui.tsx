@@ -114,19 +114,50 @@ export function ProductSection({
 }
 
 /* ================= Hero ================= */
+const HERO_FALLBACK = "/hero/ziora-hero.jpg";
+
+export type HeroSlideInput = {
+  url: string;
+  alt: string;
+  href?: string;
+  label?: string;
+};
+
+/** One slide per new-arrival product — same thumbnail shown on the New Arrivals cards. */
+export function buildHeroSlidesFromNewArrivals(products: ProductLean[]): HeroSlideInput[] {
+  const slides: HeroSlideInput[] = [];
+  const seen = new Set<string>();
+
+  for (const product of products) {
+    const url = product.thumbnail?.url;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    slides.push({
+      url,
+      alt: product.thumbnail.alt || product.name,
+      href: `/product/${product.slug}`,
+      label: product.name,
+    });
+  }
+
+  return slides;
+}
+
 export function Hero({
+  slides,
   imageUrl,
-  imageAlt = "ZIORA collection",
+  imageAlt = "ZIORA — Grace Beyond Modesty",
 }: {
+  slides?: HeroSlideInput[];
   imageUrl?: string;
   imageAlt?: string;
 }) {
-  return (
-    <HeroClient
-      imageUrl={imageUrl || "https://picsum.photos/seed/ziora-hero-atelier/1600/2000"}
-      imageAlt={imageAlt}
-    />
-  );
+  const resolved =
+    slides && slides.length > 0
+      ? slides
+      : [{ url: imageUrl || HERO_FALLBACK, alt: imageAlt }];
+
+  return <HeroClient slides={resolved} />;
 }
 
 /* ================= Category dual panels (Bonanza-style shop now) ================= */
@@ -350,7 +381,7 @@ export function SiteFooter() {
             <p className="text-[10px] uppercase tracking-[0.2em] text-onyx/40">Contact</p>
             <ul className="mt-4 space-y-2.5 text-sm text-onyx/70">
               <li>hello@ziora.pk</li>
-              <li>+92 300 0000000</li>
+              <li>+92 3144430551</li>
               <li>Mon–Sat · 10:00–18:00 PKT</li>
             </ul>
           </div>

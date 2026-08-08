@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/catalog";
 import { getAdminOrNull } from "@/lib/auth";
 import { removeImage } from "@/lib/storage";
+
+function revalidateStorefront() {
+  revalidatePath("/");
+  revalidatePath("/new-arrivals");
+  revalidatePath("/shop");
+}
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
@@ -41,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       runValidators: true,
     });
     if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
+    revalidateStorefront();
     return NextResponse.json({ success: true, product });
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
@@ -63,5 +71,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   await removeImage(product.thumbnail.publicId).catch(() => {});
   for (const img of product.images) await removeImage(img.publicId).catch(() => {});
 
+  revalidateStorefront();
   return NextResponse.json({ success: true });
 }

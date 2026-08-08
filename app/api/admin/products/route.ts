@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/catalog";
@@ -33,7 +34,7 @@ const productSchema = z.object({
   careInstructions: z.string().optional(),
   tags: z.array(z.string()).default([]),
   isFeatured: z.boolean().default(false),
-  isNewArrival: z.boolean().default(false),
+  isNewArrival: z.boolean().default(true),
   isTrending: z.boolean().default(false),
   isBestSeller: z.boolean().default(false),
   publishStatus: z.enum(["draft", "published", "hidden", "archived"]).default("published"),
@@ -94,6 +95,9 @@ export async function POST(req: NextRequest) {
         sortOrder: 0,
       },
     });
+    revalidatePath("/");
+    revalidatePath("/new-arrivals");
+    revalidatePath("/shop");
     return NextResponse.json({ success: true, product }, { status: 201 });
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {

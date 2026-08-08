@@ -105,7 +105,10 @@ export async function getFeaturedProducts(limit = 8): Promise<ProductLean[]> {
 export async function getNewArrivals(limit = 8): Promise<ProductLean[]> {
   if (await tryConnect()) {
     try {
-      const docs = await Product.find({ isNewArrival: true, publishStatus: { $ne: "archived" } })
+      const docs = await Product.find({
+        isNewArrival: true,
+        publishStatus: "published",
+      })
         .sort({ createdAt: -1 })
         .limit(limit)
         .lean();

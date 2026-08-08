@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "@/components/account-menu";
+import { NavBrandLogo } from "@/components/nav-brand-logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { useGoogleProvider } from "@/hooks/use-google-provider";
 
@@ -87,7 +88,7 @@ export function SiteNav() {
             : "border-b border-transparent bg-ivory/70 backdrop-blur-md"
         )}
       >
-        <nav className="page-shell flex h-16 items-center justify-between md:h-[4.5rem]">
+        <nav className="page-shell flex h-[4.25rem] items-center justify-between md:h-[4.75rem]">
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center md:hidden"
@@ -116,12 +117,9 @@ export function SiteNav() {
             </span>
           </button>
 
-          <Link
-            href="/"
-            className="absolute left-1/2 -translate-x-1/2 text-[1.35rem] font-semibold tracking-[0.28em] text-onyx md:static md:translate-x-0"
-          >
-            ZIORA
-          </Link>
+          <div className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
+            <NavBrandLogo priority />
+          </div>
 
           <div className="hidden items-center gap-8 md:flex">
             {LINKS.map((link) => (
@@ -238,7 +236,7 @@ export function SiteNav() {
               transition={{ type: "spring", stiffness: 120, damping: 18 }}
             >
               <div className="mb-10 flex items-center justify-between">
-                <span className="text-lg font-semibold tracking-[0.28em]">ZIORA</span>
+                <NavBrandLogo />
                 <button
                   type="button"
                   onClick={() => setOpen(false)}

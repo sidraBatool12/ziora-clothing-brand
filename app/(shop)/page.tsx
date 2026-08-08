@@ -1,6 +1,7 @@
 import { getFeaturedProducts, getNewArrivals, getStorefrontCategories } from "@/features/products/queries";
 import {
   Hero,
+  buildHeroSlidesFromNewArrivals,
   ProductSection,
   Newsletter,
   CategoryPanels,
@@ -13,15 +14,16 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const [featured, newArrivals, categories] = await Promise.all([
     getFeaturedProducts(),
-    getNewArrivals(),
+    getNewArrivals(12),
     getStorefrontCategories(),
   ]);
 
-  const heroImage = featured[0]?.thumbnail?.url;
+  // Exact product thumbnails from the New Arrivals grid — one slide per product.
+  const heroSlides = buildHeroSlidesFromNewArrivals(newArrivals);
 
   return (
     <main>
-      <Hero imageUrl={heroImage} imageAlt={featured[0]?.name || "ZIORA collection"} />
+      <Hero slides={heroSlides} />
       <CategoryRail categories={categories} />
       <ProductSection
         eyebrow="Curated"
