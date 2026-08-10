@@ -71,7 +71,13 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(item.productId, item.size, item.color, item.quantity - 1)
+                        updateQuantity(
+                          item.productId,
+                          item.size,
+                          item.color,
+                          item.quantity - 1,
+                          item.imagePublicId
+                        )
                       }
                       className="flex h-9 w-9 items-center justify-center"
                       aria-label="Decrease"
@@ -82,7 +88,13 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(item.productId, item.size, item.color, item.quantity + 1)
+                        updateQuantity(
+                          item.productId,
+                          item.size,
+                          item.color,
+                          item.quantity + 1,
+                          item.imagePublicId
+                        )
                       }
                       className="flex h-9 w-9 items-center justify-center"
                       aria-label="Increase"
@@ -92,7 +104,9 @@ export default function CartPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeItem(item.productId, item.size, item.color)}
+                    onClick={() =>
+                      removeItem(item.productId, item.size, item.color, item.imagePublicId)
+                    }
                     className="inline-flex items-center gap-1.5 text-xs text-onyx/45 transition-colors hover:text-rose"
                   >
                     <Trash size={14} weight="light" />

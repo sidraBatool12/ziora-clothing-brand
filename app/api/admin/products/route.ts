@@ -12,6 +12,11 @@ const imageUrl = z
   .min(1)
   .refine((value) => /^https?:\/\//.test(value) || value.startsWith("/"));
 
+const sizePriceSchema = z.object({
+  size: z.string().trim().min(1),
+  price: z.number().positive(),
+});
+
 const productSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
@@ -29,6 +34,7 @@ const productSchema = z.object({
   lowStockThreshold: z.number().min(0).default(5),
   sizes: z.array(z.string()).default([]),
   colors: z.array(z.string()).default([]),
+  sizePrices: z.array(sizePriceSchema).default([]),
   material: z.string().optional(),
   fabric: z.string().optional(),
   careInstructions: z.string().optional(),
@@ -50,6 +56,8 @@ const productSchema = z.object({
         publicId: z.string().min(1),
         alt: z.string().optional(),
         sortOrder: z.number().int().min(0).optional(),
+        price: z.number().positive().optional(),
+        sizePrices: z.array(sizePriceSchema).default([]),
       })
     )
     .max(20)
@@ -77,6 +85,7 @@ export async function POST(req: NextRequest) {
   const parsed = productSchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
   const { thumbnailUrl, thumbnailPublicId, images, ...rest } = parsed.data;
+  const cover = images.find((image) => image.publicId === thumbnailPublicId) || images[0];
 
   await connectDB();
   try {
@@ -86,6 +95,7 @@ export async function POST(req: NextRequest) {
         ...image,
         sortOrder: image.sortOrder ?? index,
         isThumbnail: image.publicId === thumbnailPublicId,
+        sizePrices: image.sizePrices || [],
       })),
       thumbnail: {
         url: thumbnailUrl,
@@ -93,6 +103,8 @@ export async function POST(req: NextRequest) {
         alt: rest.name,
         isThumbnail: true,
         sortOrder: 0,
+        price: cover?.price,
+        sizePrices: cover?.sizePrices || [],
       },
     });
     revalidatePath("/");

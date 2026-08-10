@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Product } from "@/models/catalog";
 import type { IOrderItem } from "@/models/order";
+import { baseUnitPrice } from "@/lib/pricing";
 
 export async function restoreOrderStock(
   items: IOrderItem[],
@@ -15,12 +16,10 @@ export async function restoreOrderStock(
   }
 }
 
+/** @deprecated Prefer resolveUnitPrice from @/lib/pricing for image/size-aware pricing. */
 export function unitPriceFromProduct(product: {
   price: number;
   discountPrice?: number;
 }) {
-  if (product.discountPrice && product.discountPrice > 0 && product.discountPrice < product.price) {
-    return product.discountPrice;
-  }
-  return product.price;
+  return baseUnitPrice(product);
 }

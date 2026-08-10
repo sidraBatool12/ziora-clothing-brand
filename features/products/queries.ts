@@ -49,6 +49,7 @@ export const MEMORY_MOCK_PRODUCTS: ProductLean[] = MOCK_PRODUCTS.map((p, index) 
     sku: p.sku,
     sizes: p.sizes,
     colors: p.colors,
+    sizePrices: [],
     material: p.fabric,
     fabric: p.fabric,
     careInstructions: p.careInstructions,

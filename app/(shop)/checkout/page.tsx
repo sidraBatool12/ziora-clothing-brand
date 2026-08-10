@@ -119,6 +119,7 @@ export default function CheckoutPage() {
             size: item.size,
             color: item.color,
             quantity: item.quantity,
+            imagePublicId: item.imagePublicId,
           })),
           address,
           paymentMethod,

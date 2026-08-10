@@ -24,6 +24,8 @@ interface UploadedImage {
   url: string;
   publicId: string;
   alt?: string;
+  price: string;
+  sizePrices: Record<string, string>;
 }
 
 const emptyForm = {
@@ -106,6 +108,7 @@ export function AdminProductForm({ categories: initialCategories }: { categories
   const [categories, setCategories] = useState(initialCategories);
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [thumbnailIndex, setThumbnailIndex] = useState(0);
+  const [sizePrices, setSizePrices] = useState<Record<string, string>>({});
   const [newCollection, setNewCollection] = useState("");
   const [collectionBusy, setCollectionBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -113,6 +116,34 @@ export function AdminProductForm({ categories: initialCategories }: { categories
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(false);
+
+  const sizeList = commaList(form.sizes);
+
+  function updateSizePrice(size: string, value: string) {
+    setSizePrices((current) => ({ ...current, [size]: value }));
+  }
+
+  function updateImagePrice(index: number, value: string) {
+    setImages((current) =>
+      current.map((image, imageIndex) => (imageIndex === index ? { ...image, price: value } : image))
+    );
+  }
+
+  function updateImageSizePrice(index: number, size: string, value: string) {
+    setImages((current) =>
+      current.map((image, imageIndex) =>
+        imageIndex === index
+          ? { ...image, sizePrices: { ...image.sizePrices, [size]: value } }
+          : image
+      )
+    );
+  }
+
+  function buildSizePricePayload(source: Record<string, string>, sizes: string[]) {
+    return sizes
+      .map((size) => ({ size, price: Number(source[size]) }))
+      .filter((entry) => Number.isFinite(entry.price) && entry.price > 0);
+  }
 
   function update(field: keyof typeof emptyForm, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -179,7 +210,13 @@ export function AdminProductForm({ categories: initialCategories }: { categories
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Image upload failed.");
-        uploaded.push({ url: data.url, publicId: data.publicId, alt: form.name || file.name });
+        uploaded.push({
+          url: data.url,
+          publicId: data.publicId,
+          alt: form.name || file.name,
+          price: "",
+          sizePrices: {},
+        });
       }
       setImages((current) => [...current, ...uploaded]);
     } catch (uploadError) {
@@ -213,6 +250,7 @@ export function AdminProductForm({ categories: initialCategories }: { categories
     }
 
     setSaving(true);
+    const sizes = commaList(form.sizes);
     const thumbnail = images[thumbnailIndex] || images[0];
     const response = await fetch("/api/admin/products", {
       method: "POST",
@@ -224,13 +262,21 @@ export function AdminProductForm({ categories: initialCategories }: { categories
         costPrice: form.costPrice ? Number(form.costPrice) : undefined,
         stockQuantity: Number(form.stockQuantity),
         lowStockThreshold: Number(form.lowStockThreshold),
-        sizes: commaList(form.sizes),
+        sizes,
         colors: commaList(form.colors),
         tags: commaList(form.tags),
+        sizePrices: buildSizePricePayload(sizePrices, sizes),
         seoKeywords: commaList(form.seoKeywords),
         thumbnailUrl: thumbnail.url,
         thumbnailPublicId: thumbnail.publicId,
-        images: images.map((image, index) => ({ ...image, sortOrder: index })),
+        images: images.map((image, index) => ({
+          url: image.url,
+          publicId: image.publicId,
+          alt: image.alt,
+          sortOrder: index,
+          price: image.price ? Number(image.price) : undefined,
+          sizePrices: buildSizePricePayload(image.sizePrices, sizes),
+        })),
       }),
     });
     const data = await response.json();
@@ -244,6 +290,7 @@ export function AdminProductForm({ categories: initialCategories }: { categories
     setSuccess(`${form.name} was added to the storefront.`);
     setForm({ ...emptyForm, category: categories[0]?._id || "" });
     setImages([]);
+    setSizePrices({});
     setThumbnailIndex(0);
     setSlugTouched(false);
     router.refresh();
@@ -363,6 +410,27 @@ export function AdminProductForm({ categories: initialCategories }: { categories
                 <input value={form.fabric} onChange={(e) => update("fabric", e.target.value)} className={fieldClass} placeholder="Nida crepe" />
               </label>
             </div>
+            {sizeList.length > 0 && (
+              <div className="mt-5 rounded-2xl bg-[#F7F5F1] p-4 ring-1 ring-inset ring-onyx/[0.06]">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-onyx/40">Size prices · optional</p>
+                <p className="mt-1 text-[11px] text-onyx/45">Leave blank to use the base price for that size.</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {sizeList.map((size) => (
+                    <label key={size} className="space-y-1.5">
+                      <span className="block text-[10px] uppercase tracking-[0.14em] text-onyx/40">{size}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={sizePrices[size] || ""}
+                        onChange={(event) => updateSizePrice(size, event.target.value)}
+                        className={fieldClass}
+                        placeholder={form.price || "PKR"}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           <div className="h-px bg-onyx/[0.07]" />
@@ -491,33 +559,70 @@ export function AdminProductForm({ categories: initialCategories }: { categories
 
               <AnimatePresence initial={false}>
                 {images.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="mt-4 grid grid-cols-3 gap-2"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 space-y-3">
                     {images.map((image, index) => (
-                      <motion.div layout key={image.publicId} className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-beige">
-                        <Image src={image.url} alt={image.alt || "Clothing"} fill className="object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setThumbnailIndex(index)}
-                          className={cn(
-                            "absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-full backdrop-blur-md",
-                            thumbnailIndex === index ? "bg-rose text-white" : "bg-white/80 text-onyx/55"
-                          )}
-                          aria-label="Use as cover image"
-                        >
-                          <Star size={12} weight={thumbnailIndex === index ? "fill" : "light"} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-onyx/65 text-white opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100"
-                          aria-label="Remove image"
-                        >
-                          <X size={12} />
-                        </button>
+                      <motion.div
+                        layout
+                        key={image.publicId}
+                        className="overflow-hidden rounded-2xl bg-[#F7F5F1] ring-1 ring-inset ring-onyx/[0.07]"
+                      >
+                        <div className="flex gap-3 p-3">
+                          <div className="relative h-28 w-20 shrink-0 overflow-hidden rounded-xl bg-beige">
+                            <Image src={image.url} alt={image.alt || "Clothing"} fill className="object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setThumbnailIndex(index)}
+                              className={cn(
+                                "absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-full backdrop-blur-md",
+                                thumbnailIndex === index ? "bg-rose text-white" : "bg-white/80 text-onyx/55"
+                              )}
+                              aria-label="Use as cover image"
+                            >
+                              <Star size={12} weight={thumbnailIndex === index ? "fill" : "light"} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-onyx/65 text-white backdrop-blur-md"
+                              aria-label="Remove image"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-onyx/40">
+                              Image {index + 1}{thumbnailIndex === index ? " · cover" : ""}
+                            </p>
+                            <label className="block space-y-1">
+                              <span className="text-[10px] text-onyx/45">Price for this image</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={image.price}
+                                onChange={(event) => updateImagePrice(index, event.target.value)}
+                                className={fieldClass}
+                                placeholder="Optional · PKR"
+                              />
+                            </label>
+                            {sizeList.length > 0 && (
+                              <div className="grid grid-cols-2 gap-2">
+                                {sizeList.map((size) => (
+                                  <label key={size} className="block space-y-1">
+                                    <span className="text-[10px] text-onyx/45">{size}</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={image.sizePrices[size] || ""}
+                                      onChange={(event) => updateImageSizePrice(index, size, event.target.value)}
+                                      className={fieldClass}
+                                      placeholder="Size price"
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </motion.div>
                     ))}
                   </motion.div>
@@ -525,7 +630,7 @@ export function AdminProductForm({ categories: initialCategories }: { categories
               </AnimatePresence>
               {images.length > 0 && (
                 <p className="mt-3 text-[10px] leading-relaxed text-onyx/38">
-                  Select the star on an image to use it as the storefront cover.
+                  Star marks the cover. Image price and size prices override the base price on the product page.
                 </p>
               )}
             </div>

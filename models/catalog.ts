@@ -16,12 +16,21 @@ const categorySchema = new Schema<ICategory>(
 );
 export const Category: Model<ICategory> = models.Category || model<ICategory>("Category", categorySchema);
 
+export interface ISizePrice {
+  size: string;
+  price: number;
+}
+
 export interface IProductImage {
   url: string;
   publicId: string;
   alt?: string;
   isThumbnail?: boolean;
   sortOrder?: number;
+  /** Optional price when this image/style is selected. */
+  price?: number;
+  /** Optional per-size prices for this image/style. */
+  sizePrices?: ISizePrice[];
 }
 
 export interface IProductVariant {
@@ -51,6 +60,8 @@ export interface IProduct {
   barcode?: string;
   sizes: string[];
   colors: string[];
+  /** Optional product-level price overrides per size. */
+  sizePrices: ISizePrice[];
   material?: string;
   fabric?: string;
   weight?: number;
@@ -76,6 +87,14 @@ export interface IProduct {
   updatedAt: Date;
 }
 
+const sizePriceSchema = new Schema<ISizePrice>(
+  {
+    size: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+  },
+  { _id: false }
+);
+
 const productImageSchema = new Schema<IProductImage>(
   {
     url: { type: String, required: true },
@@ -83,6 +102,8 @@ const productImageSchema = new Schema<IProductImage>(
     alt: String,
     isThumbnail: { type: Boolean, default: false },
     sortOrder: { type: Number, default: 0 },
+    price: { type: Number, min: 0 },
+    sizePrices: { type: [sizePriceSchema], default: [] },
   },
   { _id: false }
 );
@@ -116,6 +137,7 @@ const productSchema = new Schema<IProduct>(
     barcode: String,
     sizes: { type: [String], default: [] },
     colors: { type: [String], default: [] },
+    sizePrices: { type: [sizePriceSchema], default: [] },
     material: String,
     fabric: String,
     weight: Number,

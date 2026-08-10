@@ -8,7 +8,7 @@ import { StoreSettings } from "@/models/admin";
 import { getUserOrNull } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { sendOrderConfirmationEmail } from "@/lib/email";
-import { unitPriceFromProduct } from "@/lib/inventory";
+import { findProductImage, resolveUnitPrice } from "@/lib/pricing";
 import { rateLimit } from "@/lib/rate-limit";
 
 const addressSchema = z.object({
@@ -29,6 +29,7 @@ const orderSchema = z.object({
         size: z.string().min(1),
         color: z.string().min(1),
         quantity: z.number().int().min(1).max(50),
+        imagePublicId: z.string().optional(),
       })
     )
     .min(1)
@@ -125,22 +126,32 @@ export async function POST(req: NextRequest) {
   }> = [];
   for (const item of data.items) {
     const product = productMap.get(item.productId)!;
-    const sizeOk = product.sizes.length === 0 || product.sizes.includes(item.size);
-    const colorOk = product.colors.length === 0 || product.colors.includes(item.color);
+    const sizeOk =
+      product.sizes.length === 0 ||
+      product.sizes.includes(item.size) ||
+      item.size === "One Size";
+    const colorOk =
+      product.colors.length === 0 ||
+      product.colors.includes(item.color) ||
+      item.color === "Default";
     if (!sizeOk || !colorOk) {
       return NextResponse.json(
         { error: `Invalid size/color selection for ${product.name}.` },
         { status: 400 }
       );
     }
+    const image = findProductImage(product, item.imagePublicId);
     pricedItems.push({
       productId: item.productId,
       name: product.name,
-      image: product.thumbnail.url,
+      image: image?.url || product.thumbnail.url,
       size: item.size,
       color: item.color,
       quantity: item.quantity,
-      unitPrice: unitPriceFromProduct(product),
+      unitPrice: resolveUnitPrice(product, {
+        size: item.size,
+        imagePublicId: item.imagePublicId || image?.publicId,
+      }),
       sku: product.sku,
     });
   }
