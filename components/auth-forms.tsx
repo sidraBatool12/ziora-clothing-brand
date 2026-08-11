@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type InputHTMLAttributes } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Eye, EyeSlash } from "@phosphor-icons/react";
 import { useGoogleProvider } from "@/hooks/use-google-provider";
 
 const btnClass = "w-full rounded-full bg-onyx py-3.5 text-[11px] uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-onyx/90 active:scale-[0.98] disabled:opacity-50";
 const inputClass = "w-full border border-onyx/10 bg-white px-4 py-3 text-sm outline-none transition-colors focus-visible:border-rose";
 const labelClass = "mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-onyx/45";
+
+function PasswordInput({ className = inputClass, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        {...props}
+        type={visible ? "text" : "password"}
+        className={`${className} pr-12`}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        className="absolute inset-y-0 right-1 flex w-11 items-center justify-center text-onyx/35 transition-colors hover:text-onyx"
+        aria-label={visible ? "Hide password" : "Show password"}
+      >
+        {visible ? <EyeSlash size={18} weight="light" /> : <Eye size={18} weight="light" />}
+      </button>
+    </div>
+  );
+}
 
 /* ================= Customer Signup ================= */
 const signupSchema = z.object({
@@ -41,8 +63,8 @@ export function SignupForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div><label className={labelClass}>Full name</label><input {...register("name")} className={inputClass} />{errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}</div>
       <div><label className={labelClass}>Email</label><input type="email" {...register("email")} className={inputClass} />{errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}</div>
-      <div><label className={labelClass}>Password</label><input type="password" {...register("password")} className={inputClass} />{errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}</div>
-      <div><label className={labelClass}>Confirm password</label><input type="password" {...register("confirmPassword")} className={inputClass} />{errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>}</div>
+      <div><label className={labelClass}>Password</label><PasswordInput autoComplete="new-password" {...register("password")} />{errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}</div>
+      <div><label className={labelClass}>Confirm password</label><PasswordInput autoComplete="new-password" {...register("confirmPassword")} />{errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>}</div>
       {serverError && <p className="text-sm text-red-600">{serverError}</p>}
       <button type="submit" disabled={isSubmitting} className={btnClass}>{isSubmitting ? "Creating account…" : "Create account"}</button>
       <p className="text-center text-sm text-onyx/60">Already have an account? <Link href="/login" className="underline">Sign in</Link></p>
@@ -57,14 +79,19 @@ export function VerifyEmailForm() {
   const email = params.get("email") || "";
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resending, setResending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
+    setInfo(null);
     const res = await fetch("/api/auth/verify-otp", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, otp, purpose: "verify" }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp, purpose: "verify" }),
     });
     const data = await res.json();
     setLoading(false);
@@ -74,17 +101,56 @@ export function VerifyEmailForm() {
   }
 
   async function resend() {
-    await fetch("/api/auth/resend-verification", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
-    setResent(true);
+    if (!email || resending) return;
+    setResending(true);
+    setError(null);
+    setInfo(null);
+    const res = await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    setResending(false);
+    if (!res.ok) {
+      setError(data.error || "Could not resend code.");
+      return;
+    }
+    if (data.emailDelivered === false) {
+      setError(
+        "Email could not be sent. Check spam, confirm EMAIL_USER / EMAIL_PASS (Gmail App Password), then try again."
+      );
+      return;
+    }
+    setInfo("A new code was sent. Check inbox and spam/junk.");
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <p className="text-center text-sm text-onyx/60">We sent a 6-digit code to <strong>{email}</strong></p>
-      <input value={otp} onChange={(e) => setOtp(e.target.value)} maxLength={6} inputMode="numeric" className={`${inputClass} text-center text-2xl tracking-[0.5em]`} placeholder="000000" />
+      <p className="text-center text-sm text-onyx/60">
+        We sent a 6-digit code to <strong>{email}</strong>. Check spam if you do not see it.
+      </p>
+      <input
+        value={otp}
+        onChange={(e) => setOtp(e.target.value)}
+        maxLength={6}
+        inputMode="numeric"
+        className={`${inputClass} text-center text-2xl tracking-[0.5em]`}
+        placeholder="000000"
+      />
       {error && <p className="text-center text-sm text-red-600">{error}</p>}
-      <button type="submit" disabled={loading || otp.length !== 6} className={btnClass}>{loading ? "Verifying…" : "Verify Email"}</button>
-      <button type="button" onClick={resend} className="w-full text-center text-xs text-gold underline">{resent ? "New code sent" : "Resend code"}</button>
+      {info && <p className="text-center text-sm text-emerald-700">{info}</p>}
+      <button type="submit" disabled={loading || otp.length !== 6} className={btnClass}>
+        {loading ? "Verifying…" : "Verify Email"}
+      </button>
+      <button
+        type="button"
+        onClick={resend}
+        disabled={resending}
+        className="w-full text-center text-xs text-gold underline disabled:opacity-50"
+      >
+        {resending ? "Sending…" : "Resend code"}
+      </button>
     </form>
   );
 }
@@ -165,7 +231,7 @@ export function LoginForm() {
           <label className={labelClass}>Password</label>
           <Link href="/forgot-password" className="text-xs text-gold underline">Forgot password?</Link>
         </div>
-        <input type="password" {...register("password")} className={inputClass} />
+        <PasswordInput autoComplete="current-password" {...register("password")} />
         {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
       </div>
       {serverError && <p className="text-sm text-red-600">{serverError}</p>}
@@ -238,7 +304,7 @@ export function ResetPasswordForm() {
 
   return (
     <form onSubmit={submitNewPassword} className="space-y-5">
-      <div><label className={labelClass}>New password</label><input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} /></div>
+      <div><label className={labelClass}>New password</label><PasswordInput required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button type="submit" className={btnClass}>Reset password</button>
     </form>

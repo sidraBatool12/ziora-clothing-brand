@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/features/products/queries";
 import { ProductPurchase } from "@/components/product-purchase";
+import { ProductReviews } from "@/components/product-reviews";
 import { ProductSection } from "@/components/storefront-ui";
 import { Reveal } from "@/components/motion-reveal";
 
@@ -27,6 +28,7 @@ export default async function ProductPage({ params }: PageProps) {
           <ProductPurchase product={product} />
         </Reveal>
       </div>
+      <ProductReviews productId={product._id} />
       <ProductSection
         eyebrow="You May Also Like"
         title="Related Products"

@@ -12,14 +12,16 @@ export async function deliverOtp(
   otp: string,
   purpose: OtpPurpose,
   send: Sender
-): Promise<{ delivered: boolean }> {
+): Promise<{ delivered: boolean; error?: string }> {
   try {
     await send(to, otp, purpose);
     return { delivered: true };
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Email delivery failed";
+    console.error(`[auth] OTP email failed for ${to} (${purpose}):`, message);
     if (process.env.NODE_ENV !== "production") {
       console.warn(`[auth] OTP for ${to} (${purpose}): ${otp}`);
     }
-    return { delivered: false };
+    return { delivered: false, error: message };
   }
 }

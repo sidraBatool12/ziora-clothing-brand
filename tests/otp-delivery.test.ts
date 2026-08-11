@@ -14,6 +14,7 @@ describe("deliverOtp", () => {
     const send = vi.fn().mockRejectedValue(new Error("ENOTFOUND smtp.gmail.com"));
     await expect(deliverOtp("a@b.com", "123456", "verify", send)).resolves.toEqual({
       delivered: false,
+      error: "ENOTFOUND smtp.gmail.com",
     });
   });
 
@@ -21,6 +22,7 @@ describe("deliverOtp", () => {
     const send = vi.fn().mockRejectedValue(new Error("auth failed"));
     await expect(deliverOtp("a@b.com", "654321", "reset", send)).resolves.toEqual({
       delivered: false,
+      error: "auth failed",
     });
   });
 });

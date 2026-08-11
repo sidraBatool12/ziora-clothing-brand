@@ -1,12 +1,48 @@
 import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail", // swap for your real SMTP provider in production
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
+function emailCredentials() {
+  const user = (process.env.EMAIL_USER || "").trim();
+  const pass = (process.env.EMAIL_PASS || "").trim().replace(/\s+/g, "");
+  return { user, pass };
+}
+
+let transporter: Transporter | null = null;
+
+function getTransporter() {
+  const { user, pass } = emailCredentials();
+  if (!user || !pass) {
+    throw new Error("EMAIL_NOT_CONFIGURED");
+  }
+
+  // Recreate if credentials changed after a hot reload / env update.
+  const key = `${user}:${pass}`;
+  if (transporter && (transporter as { __key?: string }).__key === key) {
+    return transporter;
+  }
+
+  transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 20_000,
+  });
+  (transporter as { __key?: string }).__key = key;
+  return transporter;
+}
 
 async function sendEmail(to: string, subject: string, html: string) {
-  return transporter.sendMail({ from: `"ZIORA" <${process.env.EMAIL_USER}>`, to, subject, html });
+  const { user } = emailCredentials();
+  const transport = getTransporter();
+  return transport.sendMail({
+    from: `"ZIORA" <${user}>`,
+    to,
+    subject,
+    html,
+  });
 }
 
 const shell = (body: string) => `
@@ -40,7 +76,12 @@ export async function sendOrderConfirmationEmail(to: string, orderNumber: string
   await sendEmail(to, `Your ZIORA order ${orderNumber} is confirmed`, html);
 }
 
-export async function sendShippingUpdateEmail(to: string, orderNumber: string, status: string, trackingNumber?: string) {
+export async function sendShippingUpdateEmail(
+  to: string,
+  orderNumber: string,
+  status: string,
+  trackingNumber?: string
+) {
   const html = shell(`
     <h2 style="font-size:18px; color:#fff;">Shipping Update</h2>
     <p style="color:#ccc;">Your order <strong style="color:#D4AF37;">${orderNumber}</strong> is now:</p>
@@ -50,7 +91,11 @@ export async function sendShippingUpdateEmail(to: string, orderNumber: string, s
   await sendEmail(to, `Update on your ZIORA order ${orderNumber}`, html);
 }
 
-export async function sendPaymentStatusEmail(to: string, orderNumber: string, status: "paid" | "rejected" | "refunded") {
+export async function sendPaymentStatusEmail(
+  to: string,
+  orderNumber: string,
+  status: "paid" | "rejected" | "refunded"
+) {
   const messages: Record<string, string> = {
     paid: "Your payment has been verified and confirmed.",
     rejected: "We couldn't verify your payment. Please contact support or resubmit proof.",

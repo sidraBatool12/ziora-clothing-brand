@@ -1,12 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { formatPrice } from "@/lib/utils";
+import { OrderItemReviewForm } from "@/components/order-item-review-form";
 
-interface OrderItem { name: string; quantity: number; unitPrice: number; size: string; color: string; }
+interface OrderItem {
+  product: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  size: string;
+  color: string;
+  image?: string;
+}
+
 interface Order {
-  _id: string; orderNumber: string; items: OrderItem[]; totalAmount: number;
-  status: string; paymentMethod: string; paymentStatus: string; createdAt: string;
+  _id: string;
+  orderNumber: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
   shippingDetails: { courierName?: string; trackingNumber?: string; estimatedDelivery?: string };
 }
 
@@ -16,16 +32,34 @@ const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [reviewedByOrder, setReviewedByOrder] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
+
+  const loadReviewsForDelivered = useCallback(async (list: Order[]) => {
+    const delivered = list.filter((order) => order.status === "delivered");
+    const entries = await Promise.all(
+      delivered.map(async (order) => {
+        const response = await fetch(`/api/reviews?orderId=${order._id}`);
+        const data = await response.json();
+        return [order._id, (data.reviewedProductIds as string[]) || []] as const;
+      })
+    );
+    setReviewedByOrder(Object.fromEntries(entries));
+  }, []);
 
   async function load() {
     const res = await fetch("/api/orders");
     const data = await res.json();
-    setOrders(data.orders || []);
+    const list = (data.orders || []) as Order[];
+    setOrders(list);
+    await loadReviewsForDelivered(list);
     setLoading(false);
   }
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   async function cancelOrder(id: string) {
     setCancelling(id);
@@ -37,7 +71,7 @@ export default function OrdersPage() {
   }
 
   if (loading) return <p className="text-onyx/60">Loading your orders…</p>;
-  if (orders.length === 0) return <p className="text-onyx/60">You haven't placed any orders yet.</p>;
+  if (orders.length === 0) return <p className="text-onyx/60">You haven&apos;t placed any orders yet.</p>;
 
   return (
     <div className="space-y-8">
@@ -46,6 +80,11 @@ export default function OrdersPage() {
         const isCancelled = order.status === "cancelled";
         const withinWindow = Date.now() - new Date(order.createdAt).getTime() <= CANCEL_WINDOW_MS;
         const canCancel = CANCELLABLE.includes(order.status) && withinWindow;
+        const isDelivered = order.status === "delivered";
+        const reviewedIds = new Set(reviewedByOrder[order._id] || []);
+        const pendingReviewItems = isDelivered
+          ? order.items.filter((item) => item.product && !reviewedIds.has(String(item.product)))
+          : [];
 
         return (
           <div key={order._id} className="border border-onyx/10 p-6">
@@ -56,7 +95,18 @@ export default function OrdersPage() {
 
             <ul className="mb-3 space-y-1 text-xs text-onyx/60">
               {order.items.map((item, i) => (
-                <li key={i}>{item.name} ({item.color}/{item.size}) × {item.quantity}</li>
+                <li key={i}>
+                  {item.name} ({item.color}/{item.size}) × {item.quantity}
+                  {isDelivered && item.product && (
+                    <span className="ml-2 uppercase tracking-widest text-[9px]">
+                      {reviewedIds.has(String(item.product)) ? (
+                        <span className="text-emerald-700">Reviewed</span>
+                      ) : (
+                        <span className="text-rose">Review required</span>
+                      )}
+                    </span>
+                  )}
+                </li>
               ))}
             </ul>
 
@@ -93,6 +143,34 @@ export default function OrdersPage() {
               >
                 {cancelling === order._id ? "Cancelling…" : "Cancel Order"}
               </button>
+            )}
+
+            {isDelivered && pendingReviewItems.length > 0 && (
+              <div className="mt-5 space-y-4 border-t border-onyx/10 pt-4">
+                <p className="text-sm text-onyx">
+                  This order is delivered. Please submit a star rating and product photo for each item.
+                </p>
+                {pendingReviewItems.map((item) => (
+                  <OrderItemReviewForm
+                    key={`${order._id}-${item.product}`}
+                    orderId={order._id}
+                    productId={String(item.product)}
+                    productName={item.name}
+                    onSubmitted={() => {
+                      setReviewedByOrder((current) => ({
+                        ...current,
+                        [order._id]: [...(current[order._id] || []), String(item.product)],
+                      }));
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {isDelivered && pendingReviewItems.length === 0 && (
+              <p className="mt-4 text-xs uppercase tracking-widest text-emerald-700">
+                All items reviewed — thank you
+              </p>
             )}
           </div>
         );

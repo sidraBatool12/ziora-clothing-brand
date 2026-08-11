@@ -28,8 +28,20 @@ export async function POST(request: NextRequest) {
 
     await OtpToken.deleteMany({ email: user.email, purpose: "verify" });
     await OtpToken.create({ email: user.email, otpHash, purpose: "verify", expiresAt });
-    await deliverOtp(user.email, otp, "verify", sendOtpEmail);
+    const { delivered } = await deliverOtp(user.email, otp, "verify", sendOtpEmail);
+    return NextResponse.json({
+      success: true,
+      emailDelivered: delivered,
+      message: delivered
+        ? "A new verification code was sent."
+        : "Could not send email right now. Check spam, or ask support to verify your account.",
+    });
   }
 
-  return NextResponse.json({ success: true });
+  // Always succeed for unknown/verified emails to avoid account enumeration.
+  return NextResponse.json({
+    success: true,
+    emailDelivered: true,
+    message: "If that account needs verification, a code was sent.",
+  });
 }

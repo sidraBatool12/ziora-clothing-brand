@@ -17,12 +17,16 @@ const reviewSchema = new Schema<IReview>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true, index: true },
-    orderId: { type: Schema.Types.ObjectId, ref: "Order" },
+    orderId: { type: Schema.Types.ObjectId, ref: "Order", index: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, required: true },
+    comment: { type: String, default: "", trim: true },
     images: {
-      type: [{ url: String, publicId: String }],
-      default: [],
+      type: [{ url: { type: String, required: true }, publicId: { type: String, required: true } }],
+      validate: {
+        validator: (value: unknown[]) => Array.isArray(value) && value.length >= 1,
+        message: "At least one product photo is required.",
+      },
+      required: true,
     },
     isVerifiedPurchase: { type: Boolean, default: false },
     adminReply: String,
@@ -31,6 +35,7 @@ const reviewSchema = new Schema<IReview>(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+reviewSchema.index({ orderId: 1, productId: 1 });
 export const Review: Model<IReview> = models.Review || model<IReview>("Review", reviewSchema);
 
 /* ---------- Coupon ---------- */
