@@ -6,8 +6,10 @@
  */
 import mongoose from "mongoose";
 
-const REQUIRED = ["MONGODB_URI", "NEXTAUTH_SECRET", "NEXTAUTH_URL"];
+const REQUIRED = ["MONGODB_URI", "NEXTAUTH_SECRET"];
 const OPTIONAL = [
+  "NEXT_PUBLIC_APP_URL",
+  "NEXTAUTH_URL",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
   "EMAIL_USER",

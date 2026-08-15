@@ -3,8 +3,14 @@ import { ContactForm } from "@/components/contact-form";
 import { connectDB } from "@/lib/db";
 import { StoreSettings } from "@/models/admin";
 import { BRAND_EMAIL, BRAND_HOURS, BRAND_PHONE, BRAND_PHONE_TEL } from "@/lib/brand-contact";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Contact" };
+export const metadata: Metadata = pageMetadata({
+  title: "Contact",
+  description: `Get in touch with ZIORA for sizing, orders, and wholesale. Email ${BRAND_EMAIL} or call ${BRAND_PHONE}.`,
+  path: "/contact",
+});
 
 export default async function ContactPage() {
   await connectDB();

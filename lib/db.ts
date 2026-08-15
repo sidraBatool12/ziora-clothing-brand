@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ensureAdminFromEnv } from "@/lib/ensure-admin";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
@@ -23,6 +24,7 @@ export async function connectDB(): Promise<typeof mongoose> {
     cache.promise = null;
     throw err;
   }
+  await ensureAdminFromEnv();
   return cache.conn;
 }
 export default connectDB;

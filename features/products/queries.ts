@@ -278,3 +278,29 @@ export async function getStorefrontCategories() {
     count: MEMORY_MOCK_PRODUCTS.filter((p) => String(p.category) === c._id).length,
   }));
 }
+
+export async function getPublishedSitemapProducts(): Promise<{ slug: string; updatedAt: string }[]> {
+  if (await tryConnect()) {
+    try {
+      const docs = await Product.find({
+        publishStatus: { $nin: ["draft", "hidden", "archived"] },
+      })
+        .select("slug updatedAt")
+        .sort({ updatedAt: -1 })
+        .limit(5000)
+        .lean();
+      if (docs.length) {
+        return docs.map((doc) => ({
+          slug: doc.slug,
+          updatedAt: new Date(doc.updatedAt).toISOString(),
+        }));
+      }
+    } catch {
+      /* use mocks */
+    }
+  }
+  return MEMORY_MOCK_PRODUCTS.map((product) => ({
+    slug: product.slug,
+    updatedAt: new Date(product.updatedAt).toISOString(),
+  }));
+}

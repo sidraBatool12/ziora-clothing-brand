@@ -1,9 +1,15 @@
 import { getNewArrivals } from "@/features/products/queries";
 import { ProductCard } from "@/components/storefront-ui";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion-reveal";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "New Arrivals" };
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = pageMetadata({
+  title: "New Arrivals",
+  description: "Discover the latest ZIORA modest fashion arrivals — fresh cuts, fabrics, and seasonal silhouettes.",
+  path: "/new-arrivals",
+});
 
 export default async function NewArrivalsPage() {
   const products = await getNewArrivals(24);

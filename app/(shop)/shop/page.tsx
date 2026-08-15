@@ -1,12 +1,27 @@
 import { getProducts } from "@/features/products/queries";
 import { ProductCard } from "@/components/storefront-ui";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion-reveal";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Shop" };
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | undefined }>;
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const filtered = Boolean(params.search || params.category || params.minPrice || params.maxPrice);
+  const page = Number(params.page || 1);
+  const canonical = page > 1 ? `/shop?page=${page}` : "/shop";
+  return pageMetadata({
+    title: page > 1 ? `Shop · Page ${page}` : "Shop Modest Wear",
+    description:
+      "Browse the full ZIORA collection of premium modest fashion — ready-to-wear pieces, new arrivals, and timeless designs.",
+    path: filtered ? "/shop" : canonical,
+    index: !filtered,
+  });
 }
 
 export default async function ShopPage({ searchParams }: PageProps) {

@@ -3,8 +3,13 @@ import { requireUser } from "@/lib/auth";
 import { PromoBar, SiteNav, SiteFooter } from "@/components/storefront-ui";
 import { LogoutButton } from "@/components/logout-button";
 import { UserAvatar } from "@/components/user-avatar";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Account",
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+};
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },

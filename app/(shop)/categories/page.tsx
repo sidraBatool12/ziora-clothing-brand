@@ -3,8 +3,14 @@ import Image from "next/image";
 import { getStorefrontCategories } from "@/features/products/queries";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion-reveal";
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Categories" };
+export const metadata: Metadata = pageMetadata({
+  title: "Collections",
+  description: "Explore ZIORA collections — ready to wear, unstitched, festive, and everyday modest essentials.",
+  path: "/categories",
+});
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {

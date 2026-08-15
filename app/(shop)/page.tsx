@@ -8,8 +8,17 @@ import {
   CategoryRail,
   EditorialStrip,
 } from "@/components/storefront-ui";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Premium Modest Fashion",
+  description:
+    "Shop ZIORA modest fashion from Gilgit. Featured pieces, new arrivals, and curated collections designed for elegance and everyday comfort.",
+  path: "/",
+});
 
 export default async function HomePage() {
   const [featured, newArrivals, categories] = await Promise.all([

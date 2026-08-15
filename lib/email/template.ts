@@ -13,6 +13,7 @@ export function brandEmailTemplate(input: {
   intro?: string;
   details?: EmailDetail[];
   note?: string;
+  cta?: { label: string; href: string };
 }) {
   const details = (input.details || [])
     .map(
@@ -20,6 +21,9 @@ export function brandEmailTemplate(input: {
         `<p style="color:#ccc;margin:8px 0;"><strong style="color:#fff;">${escapeHtml(row.label)}:</strong> ${escapeHtml(row.value)}</p>`
     )
     .join("");
+  const cta = input.cta
+    ? `<p style="margin-top:20px;"><a href="${escapeHtml(input.cta.href)}" style="display:inline-block;background:#D4AF37;color:#0F0F0F;text-decoration:none;padding:10px 18px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">${escapeHtml(input.cta.label)}</a></p>`
+    : "";
 
   return `
   <div style="font-family: Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; background:#0F0F0F; color:#F8F5F0; padding: 32px;">
@@ -29,6 +33,7 @@ export function brandEmailTemplate(input: {
     <h2 style="font-size:18px; color:#fff; margin:0 0 12px;">${escapeHtml(input.heading)}</h2>
     ${input.intro ? `<p style="color:#ccc;line-height:1.6;">${escapeHtml(input.intro)}</p>` : ""}
     ${details}
+    ${cta}
     ${input.note ? `<p style="font-size:13px;color:#888;margin-top:16px;">${escapeHtml(input.note)}</p>` : ""}
   </div>
 `;

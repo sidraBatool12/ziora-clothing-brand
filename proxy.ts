@@ -1,5 +1,8 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { syncAuthUrlFromAppUrl } from "@/lib/app-url";
+
+syncAuthUrlFromAppUrl();
 
 const authProxy = withAuth(
   function onRequest(request) {

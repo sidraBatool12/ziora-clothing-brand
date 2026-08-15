@@ -5,7 +5,7 @@ import { ShieldCheck, Storefront } from "@phosphor-icons/react/dist/ssr";
 import { authOptions } from "@/lib/auth-options";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 
-export const metadata = { title: "Admin Sign In | ZIORA" };
+export const metadata = { title: "Admin Sign In" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminLoginPage() {

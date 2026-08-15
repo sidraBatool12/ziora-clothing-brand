@@ -1,8 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/motion-reveal";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "About" };
+export const metadata: Metadata = pageMetadata({
+  title: "About ZIORA",
+  description:
+    "ZIORA is a premium modest fashion brand founded in 2026 by Sidra Batool in Gilgit. Discover our story, mission, and values — Grace Beyond Modesty.",
+  path: "/about",
+  image: "/about/sidra-batool-founder-circle.png",
+});
 
 const reasons = [
   "Premium Quality Fabrics",

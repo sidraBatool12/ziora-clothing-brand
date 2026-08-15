@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { brandEmailTemplate, escapeHtml, formatPkr } from "@/lib/email/template";
+import { absoluteUrl } from "@/lib/app-url";
 
 function emailCredentials() {
   const user = (process.env.EMAIL_USER || "").trim();
@@ -65,6 +66,7 @@ export async function sendCustomerRegisteredEmail(to: string, name?: string) {
     heading: "Welcome to ZIORA",
     intro: `Hi ${name || "there"}, your account has been created successfully.`,
     note: "Verify your email to start shopping modest luxury from ZIORA.",
+    cta: { label: "Verify email", href: absoluteUrl("/verify-email") },
   });
   await sendEmail(to, "Your ZIORA account is ready", html);
 }
@@ -74,6 +76,7 @@ export async function sendEmailVerifiedEmail(to: string, name?: string) {
     heading: "Email verified",
     intro: `Hi ${name || "there"}, your email has been verified. You can now sign in and shop.`,
     note: "If you did not create this account, please contact ZIORA support.",
+    cta: { label: "Sign in", href: absoluteUrl("/login") },
   });
   await sendEmail(to, "Your ZIORA email is verified", html);
 }
@@ -85,6 +88,10 @@ export async function sendOtpEmail(to: string, otp: string, purpose: "verify" | 
     intro: `Your verification code is ${otp}.`,
     details: [{ label: "Code", value: otp }],
     note: `Expires in ${process.env.OTP_EXPIRY_MINUTES || 10} minutes. If you didn't request this, you can ignore this email.`,
+    cta: {
+      label: purpose === "verify" ? "Verify email" : "Reset password",
+      href: absoluteUrl(purpose === "verify" ? "/verify-email" : "/reset-password"),
+    },
   });
   await sendEmail(to, `${otp} is your ZIORA verification code`, html);
 }
@@ -94,6 +101,7 @@ export async function sendPasswordResetSuccessEmail(to: string, name?: string) {
     heading: "Password updated",
     intro: `Hi ${name || "there"}, your ZIORA password was reset successfully.`,
     note: "If you did not do this, contact support immediately.",
+    cta: { label: "Sign in", href: absoluteUrl("/login") },
   });
   await sendEmail(to, "Your ZIORA password was reset", html);
 }
@@ -107,6 +115,7 @@ export async function sendOrderPlacedEmail(input: OrderMail) {
       ...(input.total != null ? [{ label: "Total", value: formatPkr(input.total) }] : []),
     ],
     note: "Track your order any time from your ZIORA dashboard.",
+    cta: { label: "Track order", href: absoluteUrl("/dashboard/orders") },
   });
   await sendEmail(input.email, `Your ZIORA order ${input.orderNumber} has been placed`, html);
 }
@@ -120,6 +129,7 @@ export async function sendOrderConfirmedEmail(input: OrderMail) {
       ...(input.total != null ? [{ label: "Total", value: formatPkr(input.total) }] : []),
     ],
     note: "We will email you again when it ships.",
+    cta: { label: "View order", href: absoluteUrl("/dashboard/orders") },
   });
   await sendEmail(input.email, `Your ZIORA order ${input.orderNumber} is confirmed`, html);
 }
@@ -132,6 +142,7 @@ export async function sendOrderShippedEmail(input: OrderMail) {
       { label: "Order", value: input.orderNumber },
       ...(input.trackingNumber ? [{ label: "Tracking", value: input.trackingNumber }] : []),
     ],
+    cta: { label: "Track order", href: absoluteUrl("/dashboard/orders") },
   });
   await sendEmail(input.email, `Your ZIORA order ${input.orderNumber} has shipped`, html);
 }
@@ -144,6 +155,7 @@ export async function sendOrderOutForDeliveryEmail(input: OrderMail) {
       { label: "Order", value: input.orderNumber },
       ...(input.trackingNumber ? [{ label: "Tracking", value: input.trackingNumber }] : []),
     ],
+    cta: { label: "Track order", href: absoluteUrl("/dashboard/orders") },
   });
   await sendEmail(input.email, `Your ZIORA order ${input.orderNumber} is out for delivery`, html);
 }
@@ -154,6 +166,7 @@ export async function sendOrderDeliveredEmail(input: OrderMail) {
     intro: "Your order has been delivered. We hope you love your ZIORA pieces.",
     details: [{ label: "Order", value: input.orderNumber }],
     note: "You can share a review from your dashboard once you have tried them on.",
+    cta: { label: "Leave a review", href: absoluteUrl("/dashboard/orders") },
   });
   await sendEmail(input.email, `Your ZIORA order ${input.orderNumber} was delivered`, html);
 }
@@ -167,6 +180,7 @@ export async function sendOrderCancelledEmail(input: OrderMail) {
       ...(input.total != null ? [{ label: "Total", value: formatPkr(input.total) }] : []),
     ],
     note: "If this was unexpected, reply to this email or contact ZIORA support.",
+    cta: { label: "Contact support", href: absoluteUrl("/contact") },
   });
   await sendEmail(input.email, `Your ZIORA order ${input.orderNumber} was cancelled`, html);
 }
@@ -179,6 +193,7 @@ export async function sendPaymentReceivedEmail(input: OrderMail) {
       { label: "Order", value: input.orderNumber },
       ...(input.total != null ? [{ label: "Total", value: formatPkr(input.total) }] : []),
     ],
+    cta: { label: "View order", href: absoluteUrl("/dashboard/orders") },
   });
   await sendEmail(input.email, `Payment received for ZIORA order ${input.orderNumber}`, html);
 }
@@ -232,6 +247,7 @@ export async function sendAdminNewCustomerEmail(input: Person) {
       { label: "Name", value: input.name || "Customer" },
       { label: "Email", value: input.email },
     ],
+    cta: { label: "Open admin", href: absoluteUrl("/admin/users") },
   });
   await sendEmail(storeInbox(), `New ZIORA customer: ${input.email}`, html, { replyTo: input.email });
 }
@@ -251,6 +267,7 @@ export async function sendAdminNewOrderEmail(input: {
       { label: "Customer", value: `${input.customerName || "Customer"} (${input.customerEmail})` },
     ],
     note: "Open the admin orders panel to process this order.",
+    cta: { label: "Open order", href: absoluteUrl("/admin/orders") },
   });
   await sendEmail(storeInbox(), `New ZIORA order ${input.orderNumber}`, html, {
     replyTo: input.customerEmail,

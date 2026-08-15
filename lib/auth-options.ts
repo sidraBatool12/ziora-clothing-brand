@@ -10,6 +10,9 @@ import { evaluateCredentialLogin } from "@/lib/auth-result";
 import { isGoogleConfigured } from "@/lib/provider-config";
 import { sendAdminNewCustomerEmail, sendCustomerRegisteredEmail, sendEmailVerifiedEmail } from "@/lib/email";
 import { notifyLater } from "@/lib/notify";
+import { getAppUrl, syncAuthUrlFromAppUrl } from "@/lib/app-url";
+
+syncAuthUrlFromAppUrl();
 
 const credentialsSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
@@ -216,9 +219,15 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
+      const appOrigin = getAppUrl();
+      const origin = appOrigin || baseUrl;
+      if (url.startsWith("/")) return `${origin}${url}`;
+      try {
+        if (new URL(url).origin === origin || new URL(url).origin === baseUrl) return url;
+      } catch {
+        return origin;
+      }
+      return origin;
     },
   },
 };

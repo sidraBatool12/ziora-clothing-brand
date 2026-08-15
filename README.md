@@ -10,7 +10,7 @@ ZIORA is a modern luxury modest fashion e-commerce platform built with Next.js A
 - Role-separated dashboards (`customer` / `admin`)
 - Public admin registration is disabled
 
-Required env vars: `MONGODB_URI`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
+Required env vars: `MONGODB_URI`, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_URL`
 
 ```bash
 # Generate a secret
@@ -37,7 +37,7 @@ npm run verify-user -- you@example.com
 ```bash
 npm install
 cp .env.example .env.local
-# Fill NEXTAUTH_SECRET, NEXTAUTH_URL=http://localhost:3000, and MONGODB_URI
+# Fill NEXTAUTH_SECRET, NEXT_PUBLIC_APP_URL=http://localhost:3000, and MONGODB_URI
 npm run create-admin
 npm run dev
 ```
@@ -49,7 +49,7 @@ Open [http://localhost:3000](http://localhost:3000)
 See `.env.example` for:
 
 - MongoDB
-- Auth.js / NextAuth secrets (`NEXTAUTH_SECRET`, `NEXTAUTH_URL`)
+- Auth.js / NextAuth secrets (`NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `NEXTAUTH_URL`)
 - Google OAuth credentials (optional — when blank, the Google button is hidden)
 - Cloudinary
 - Email/OTP
@@ -57,7 +57,7 @@ See `.env.example` for:
 Google callback URL:
 
 ```text
-http://localhost:3000/api/auth/callback/google
+${NEXT_PUBLIC_APP_URL}/api/auth/callback/google
 ```
 
 ## Tests
