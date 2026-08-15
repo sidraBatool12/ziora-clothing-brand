@@ -4,9 +4,10 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User, OtpToken } from "@/models/user";
 import { generateOtp } from "@/lib/utils";
-import { sendOtpEmail } from "@/lib/email";
+import { sendOtpEmail, sendCustomerRegisteredEmail, sendAdminNewCustomerEmail } from "@/lib/email";
 import { deliverOtp } from "@/lib/otp-delivery";
 import { rateLimit } from "@/lib/rate-limit";
+import { notifyLater } from "@/lib/notify";
 
 const schema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
   const expiresAt = new Date(Date.now() + Number(process.env.OTP_EXPIRY_MINUTES || 10) * 60_000);
   await OtpToken.create({ email, otpHash, purpose: "verify", expiresAt });
   const { delivered } = await deliverOtp(email, otp, "verify", sendOtpEmail);
+  notifyLater("customer-registered", sendCustomerRegisteredEmail(email, name));
+  notifyLater("admin-new-customer", sendAdminNewCustomerEmail({ email, name }));
 
   return NextResponse.json({ success: true, email, emailDelivered: delivered });
 }

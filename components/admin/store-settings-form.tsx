@@ -104,8 +104,8 @@ export function StoreSettingsForm({ initial }: { initial: Settings }) {
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {[
             ["storeName", "Store name", "ZIORA", "text"],
-            ["supportEmail", "Support email", "hello@ziora.pk", "email"],
-            ["supportPhone", "Support phone", "+92...", "tel"],
+            ["supportEmail", "Support email", "zioracollections137@gmail.com", "email"],
+            ["supportPhone", "Support phone", "03144430551", "tel"],
             ["businessHours", "Business hours", "Mon–Fri 9:30–18:00 PKT", "text"],
           ].map(([field, label, placeholder, type]) => (
             <label key={field} className="space-y-2">

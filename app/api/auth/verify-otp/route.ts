@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User, OtpToken } from "@/models/user";
+import { sendEmailVerifiedEmail } from "@/lib/email";
+import { notifyLater } from "@/lib/notify";
 
 const schema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
   if (purpose === "verify") {
     const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { new: true });
     if (!user) return NextResponse.json({ error: "Account not found." }, { status: 404 });
+    notifyLater("email-verified", sendEmailVerifiedEmail(user.email, user.name));
     return NextResponse.json({ success: true, redirect: "/login?verified=1" });
   }
 

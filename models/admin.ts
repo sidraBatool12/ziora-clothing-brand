@@ -63,9 +63,9 @@ const storeSettingsSchema = new Schema<IStoreSettings>(
   {
     key: { type: String, enum: ["primary"], default: "primary", unique: true },
     storeName: { type: String, default: "ZIORA" },
-    supportEmail: { type: String, default: "hello@ziora.pk" },
-    supportPhone: { type: String, default: "" },
-    businessHours: { type: String, default: "Mon–Fri 9:30–18:00 PKT" },
+    supportEmail: { type: String, default: "zioracollections137@gmail.com" },
+    supportPhone: { type: String, default: "03144430551" },
+    businessHours: { type: String, default: "Mon–Sat · 10:00–18:00 PKT" },
     currency: { type: String, default: "PKR" },
     shippingFee: { type: Number, default: 350, min: 0 },
     freeShippingThreshold: { type: Number, default: 10000, min: 0 },

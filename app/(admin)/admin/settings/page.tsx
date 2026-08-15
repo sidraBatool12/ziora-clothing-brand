@@ -13,8 +13,8 @@ export default async function AdminSettingsPage() {
   // Documents created before the payment-details fields existed lack them entirely.
   const initial = {
     storeName: settings?.storeName ?? "ZIORA",
-    supportEmail: settings?.supportEmail ?? "hello@ziora.pk",
-    supportPhone: settings?.supportPhone ?? "",
+    supportEmail: settings?.supportEmail ?? "zioracollections137@gmail.com",
+    supportPhone: settings?.supportPhone ?? "03144430551",
     businessHours: settings?.businessHours ?? "",
     currency: settings?.currency ?? "PKR",
     shippingFee: settings?.shippingFee ?? 350,

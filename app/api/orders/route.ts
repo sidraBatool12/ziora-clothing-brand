@@ -7,9 +7,11 @@ import { Product } from "@/models/catalog";
 import { StoreSettings } from "@/models/admin";
 import { getUserOrNull } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
-import { sendOrderConfirmationEmail } from "@/lib/email";
+import { sendAdminNewOrderEmail, sendOrderPlacedEmail } from "@/lib/email";
 import { findProductImage, resolveUnitPrice } from "@/lib/pricing";
 import { rateLimit } from "@/lib/rate-limit";
+import { queueStockAlerts } from "@/lib/inventory";
+import { notifyLater } from "@/lib/notify";
 
 const addressSchema = z.object({
   fullName: z.string().min(1),
@@ -164,6 +166,7 @@ export async function POST(req: NextRequest) {
 
   const session = await mongoose.startSession();
   let insufficientStockError: string | null = null;
+  const stockSnapshots: { name: string; sku?: string; stockQuantity: number }[] = [];
 
   try {
     await session.withTransaction(async () => {
@@ -183,6 +186,11 @@ export async function POST(req: NextRequest) {
           insufficientStockError = `Only ${available} item${available === 1 ? "" : "s"} of "${item.name}" available.`;
           throw new Error("INSUFFICIENT_STOCK");
         }
+        stockSnapshots.push({
+          name: updated.name,
+          sku: updated.sku,
+          stockQuantity: updated.stockQuantity,
+        });
       }
 
       await Order.create(
@@ -222,7 +230,27 @@ export async function POST(req: NextRequest) {
     await session.endSession();
   }
 
-  await sendOrderConfirmationEmail(user.email, orderNumber, totalAmount).catch(() => undefined);
+  await Promise.all([
+    notifyLater(
+      "order-placed",
+      sendOrderPlacedEmail({
+        email: user.email,
+        name: user.name,
+        orderNumber,
+        total: totalAmount,
+      })
+    ),
+    notifyLater(
+      "admin-new-order",
+      sendAdminNewOrderEmail({
+        orderNumber,
+        total: totalAmount,
+        customerEmail: user.email,
+        customerName: user.name,
+      })
+    ),
+  ]);
+  queueStockAlerts(stockSnapshots);
 
   return NextResponse.json({ success: true, orderNumber, totalAmount });
 }

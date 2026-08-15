@@ -3,6 +3,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { ContactMessage } from "@/models/admin";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendContactNotificationEmail } from "@/lib/email";
 
 const schema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -28,5 +29,17 @@ export async function POST(request: NextRequest) {
 
   await connectDB();
   await ContactMessage.create(parsed.data);
+
+  try {
+    await sendContactNotificationEmail(parsed.data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Email delivery failed";
+    console.error("[contact] Failed to email ZIORA inbox:", message);
+    return NextResponse.json(
+      { error: "Message saved, but email could not be sent to ZIORA. Check EMAIL_USER / EMAIL_PASS." },
+      { status: 502 }
+    );
+  }
+
   return NextResponse.json({ success: true }, { status: 201 });
 }

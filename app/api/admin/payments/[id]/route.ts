@@ -5,8 +5,9 @@ import { connectDB } from "@/lib/db";
 import { Order } from "@/models/order";
 import { User } from "@/models/user";
 import { getAdminOrNull } from "@/lib/auth";
-import { sendPaymentStatusEmail } from "@/lib/email";
+import { sendAdminOrderCancelledEmail, sendOrderCancelledEmail, sendOrderConfirmedEmail, sendPaymentStatusEmail } from "@/lib/email";
 import { restoreOrderStock } from "@/lib/inventory";
+import { notifyLater } from "@/lib/notify";
 
 const schema = z.object({ action: z.enum(["approve", "reject", "refund"]) });
 
@@ -53,11 +54,45 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const customer = await User.findById(order.user).lean();
   if (customer?.email) {
-    await sendPaymentStatusEmail(
-      customer.email,
-      order.orderNumber,
-      order.paymentStatus as "paid" | "rejected" | "refunded"
-    ).catch(() => undefined);
+    notifyLater(
+      `payment-${order.paymentStatus}`,
+      sendPaymentStatusEmail(
+        customer.email,
+        order.orderNumber,
+        order.paymentStatus as "paid" | "rejected" | "refunded"
+      )
+    );
+    if (action === "approve" && order.status === "confirmed") {
+      notifyLater(
+        "order-confirmed",
+        sendOrderConfirmedEmail({
+          email: customer.email,
+          name: customer.name,
+          orderNumber: order.orderNumber,
+          total: order.totalAmount,
+        })
+      );
+    }
+    if (order.status === "cancelled") {
+      notifyLater(
+        "order-cancelled",
+        sendOrderCancelledEmail({
+          email: customer.email,
+          name: customer.name,
+          orderNumber: order.orderNumber,
+          total: order.totalAmount,
+        })
+      );
+      notifyLater(
+        "admin-order-cancelled",
+        sendAdminOrderCancelledEmail({
+          orderNumber: order.orderNumber,
+          total: order.totalAmount,
+          customerEmail: customer.email,
+          customerName: customer.name,
+        })
+      );
+    }
   }
 
   return NextResponse.json({ success: true });

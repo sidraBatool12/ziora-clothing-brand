@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowUpRight, ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import type { ProductLean } from "@/features/products/queries";
 import { formatPrice } from "@/lib/utils";
+import { BRAND_EMAIL, BRAND_PHONE, BRAND_PHONE_TEL } from "@/lib/brand-contact";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion-reveal";
 import { HeroClient } from "@/components/hero-client";
 
@@ -353,8 +354,15 @@ export function SiteFooter() {
     <footer className="border-t border-onyx/10 bg-white/50">
       <div className="page-shell grid gap-12 py-16 md:grid-cols-12 md:py-20">
         <div className="md:col-span-4">
-          <p className="text-xl font-semibold tracking-[0.28em] text-onyx">ZIORA</p>
-          <p className="eyebrow mt-3">Grace Beyond Modesty</p>
+          <Link href="/" aria-label="ZIORA home" className="inline-flex">
+            <Image
+              src="/brand/ziora-logo-nav.png"
+              alt="ZIORA — Grace Beyond Modesty"
+              width={180}
+              height={180}
+              className="h-20 w-auto object-contain object-left md:h-24"
+            />
+          </Link>
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-onyx/55">
             Premium modest fashion crafted for women who move through the world with quiet confidence.
           </p>
@@ -380,8 +388,16 @@ export function SiteFooter() {
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-onyx/40">Contact</p>
             <ul className="mt-4 space-y-2.5 text-sm text-onyx/70">
-              <li>hello@ziora.pk</li>
-              <li>+92 3144430551</li>
+              <li>
+                <a href={`mailto:${BRAND_EMAIL}`} className="transition-colors hover:text-rose">
+                  {BRAND_EMAIL}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:${BRAND_PHONE_TEL}`} className="transition-colors hover:text-rose">
+                  {BRAND_PHONE}
+                </a>
+              </li>
               <li>Mon–Sat · 10:00–18:00 PKT</li>
             </ul>
           </div>
@@ -390,7 +406,7 @@ export function SiteFooter() {
       <div className="border-t border-onyx/10">
         <div className="page-shell flex flex-col gap-3 py-6 text-xs text-onyx/40 sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 ZIORA. All rights reserved.</p>
-          <p className="tracking-[0.12em] uppercase">Pakistan · Modest Luxury</p>
+          <p className="tracking-[0.12em] uppercase">Gilgit · Modest Luxury</p>
         </div>
       </div>
     </footer>

@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/user";
+import { sendPasswordResetSuccessEmail } from "@/lib/email";
+import { notifyLater } from "@/lib/notify";
 
 const schema = z.object({ resetToken: z.string(), newPassword: z.string().min(8) });
 
@@ -24,6 +26,7 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(newPassword, 10);
   const user = await User.findOneAndUpdate({ email: payload.email }, { passwordHash });
   if (!user) return NextResponse.json({ error: "Account not found." }, { status: 404 });
+  notifyLater("password-reset", sendPasswordResetSuccessEmail(user.email, user.name));
 
   return NextResponse.json({ success: true });
 }

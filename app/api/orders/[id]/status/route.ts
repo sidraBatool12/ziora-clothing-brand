@@ -5,8 +5,9 @@ import { connectDB } from "@/lib/db";
 import { Order } from "@/models/order";
 import { User } from "@/models/user";
 import { getAdminOrNull } from "@/lib/auth";
-import { sendShippingUpdateEmail } from "@/lib/email";
+import { sendAdminOrderCancelledEmail, sendShippingUpdateEmail } from "@/lib/email";
 import { restoreOrderStock } from "@/lib/inventory";
+import { notifyLater } from "@/lib/notify";
 
 const RESTOCK_STATUSES = new Set(["cancelled", "returned", "refunded"]);
 const ALREADY_RESTOCKED = new Set(["cancelled", "returned", "refunded"]);
@@ -82,13 +83,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const customer = await User.findById(order.user).lean();
-  if (customer?.email && data.status) {
-    await sendShippingUpdateEmail(
-      customer.email,
-      order.orderNumber,
-      order.status,
-      order.shippingDetails.trackingNumber
-    ).catch(() => undefined);
+  if (customer?.email && data.status && data.status !== previousStatus) {
+    notifyLater(
+      `order-status-${order.status}`,
+      sendShippingUpdateEmail(
+        customer.email,
+        order.orderNumber,
+        order.status,
+        order.shippingDetails.trackingNumber
+      )
+    );
+    if (order.status === "cancelled") {
+      notifyLater(
+        "admin-order-cancelled",
+        sendAdminOrderCancelledEmail({
+          orderNumber: order.orderNumber,
+          total: order.totalAmount,
+          customerEmail: customer.email,
+          customerName: customer.name,
+        })
+      );
+    }
   }
 
   return NextResponse.json({ success: true });

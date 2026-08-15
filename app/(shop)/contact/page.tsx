@@ -2,15 +2,16 @@ import { Reveal } from "@/components/motion-reveal";
 import { ContactForm } from "@/components/contact-form";
 import { connectDB } from "@/lib/db";
 import { StoreSettings } from "@/models/admin";
+import { BRAND_EMAIL, BRAND_HOURS, BRAND_PHONE, BRAND_PHONE_TEL } from "@/lib/brand-contact";
 
 export const metadata = { title: "Contact" };
 
 export default async function ContactPage() {
   await connectDB();
   const settings = await StoreSettings.findOne({ key: "primary" }).lean();
-  const supportEmail = settings?.supportEmail || "hello@ziora.pk";
-  const supportPhone = settings?.supportPhone || "Support number coming soon";
-  const businessHours = settings?.businessHours || "Mon–Fri 9:30–18:00 PKT";
+  const supportEmail = BRAND_EMAIL;
+  const supportPhone = BRAND_PHONE;
+  const businessHours = settings?.businessHours || BRAND_HOURS;
 
   return (
     <main className="page-shell py-14 md:py-20">
@@ -24,11 +25,15 @@ export default async function ContactPage() {
           <div className="mt-10 space-y-5 text-sm text-onyx/70">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-onyx/40">Email</p>
-              <p className="mt-1">{supportEmail}</p>
+              <a href={`mailto:${supportEmail}`} className="mt-1 block transition-colors hover:text-rose">
+                {supportEmail}
+              </a>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-onyx/40">Phone</p>
-              <p className="mt-1">{supportPhone}</p>
+              <a href={`tel:${BRAND_PHONE_TEL}`} className="mt-1 block transition-colors hover:text-rose">
+                {supportPhone}
+              </a>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-onyx/40">Hours</p>

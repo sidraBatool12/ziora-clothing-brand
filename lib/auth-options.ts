@@ -8,6 +8,8 @@ import { connectDB } from "@/lib/db";
 import { User } from "@/models/user";
 import { evaluateCredentialLogin } from "@/lib/auth-result";
 import { isGoogleConfigured } from "@/lib/provider-config";
+import { sendAdminNewCustomerEmail, sendCustomerRegisteredEmail, sendEmailVerifiedEmail } from "@/lib/email";
+import { notifyLater } from "@/lib/notify";
 
 const credentialsSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
@@ -118,6 +120,7 @@ export const authOptions: NextAuthOptions = {
 
       await connectDB();
       let dbUser = await User.findOne({ email });
+      const isNewCustomer = !dbUser;
 
       if (dbUser) {
         dbUser.name = user.name?.trim() || dbUser.name;
@@ -149,6 +152,13 @@ export const authOptions: NextAuthOptions = {
       user.role = dbUser.role;
       user.sessionVersion = dbUser.sessionVersion;
       user.image = dbUser.avatar;
+
+      if (isNewCustomer) {
+        notifyLater("google-registered", sendCustomerRegisteredEmail(dbUser.email, dbUser.name));
+        notifyLater("google-verified", sendEmailVerifiedEmail(dbUser.email, dbUser.name));
+        notifyLater("admin-new-customer", sendAdminNewCustomerEmail({ email: dbUser.email, name: dbUser.name }));
+      }
+
       return true;
     },
     async jwt({ token, user, trigger }) {
